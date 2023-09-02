@@ -1,0 +1,17 @@
+---
+application:
+  security:
+    enabled: false
+logging:
+  level:
+    root: INFO
+spring:
+  main:
+    banner-mode: "off"
+  datasource:
+    url: jdbc:h2:file:./data/porturl
+    driverClassName: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    defer-datasource-initialization: true
+    generate-ddl: true

@@ -1,0 +1,7 @@
+<configuration>
+    <appender name="accessJson" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashAccessEncoder" />
+    </appender>
+
+    <appender-ref ref="accessJson" />
+</configuration>
