@@ -1,8 +1,11 @@
+import net.researchgate.release.ReleaseExtension
+
 plugins {
     java
     id("org.springframework.boot") version "3.1.3"
     id("io.spring.dependency-management") version "1.1.3"
     id("org.graalvm.buildtools.native") version "0.9.25"
+    id("net.researchgate.release") version "3.0.2"
 }
 
 group = "org.friesoft.porturl"
@@ -25,7 +28,7 @@ repositories {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-hateoas")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("io.micrometer:micrometer-tracing-bridge-brave")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -49,6 +52,12 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
 }
 
+configure<ReleaseExtension> {
+    with(git) {
+        failOnUnversionedFiles.set(false)
+        requireBranch.set("main")
+    }
+}
 tasks.withType<Test> {
     useJUnitPlatform()
 }
