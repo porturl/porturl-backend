@@ -6,7 +6,6 @@ import org.friesoft.porturl.repositories.ApplicationRepository;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:22080")
 public class ApplicationController {
 
     private final ApplicationRepository repository;
