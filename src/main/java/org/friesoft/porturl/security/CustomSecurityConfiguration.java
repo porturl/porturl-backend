@@ -13,7 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class CustomSecurityConfiguration {
 
-    @Value("${application.security.enabled:true}")
+    @Value("${porturl.security.enabled:true}")
     private boolean securityEnabled;
 
     @Bean

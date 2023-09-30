@@ -1,5 +1,5 @@
 ---
-application:
+porturl:
   security:
     enabled: false
 logging:
