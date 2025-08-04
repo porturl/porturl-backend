@@ -3,7 +3,7 @@ import net.researchgate.release.ReleaseExtension
 plugins {
     java
     id("org.springframework.boot") version "3.2.4"
-    id("io.spring.dependency-management") version "1.1.4"
+    id("io.spring.dependency-management") version "1.1.7"
     id("org.graalvm.buildtools.native") version "0.10.1"
     id("net.researchgate.release") version "3.0.2"
 }
