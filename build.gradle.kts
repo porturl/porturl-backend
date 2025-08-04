@@ -57,6 +57,11 @@ configure<ReleaseExtension> {
     tagTemplate.set("v\$version")  // Creates tags like v1.0.0
 }
 
+// don't build plain jar as we only want the executable boot jar
+tasks.named<Jar>("jar") {
+    enabled = false
+}
+
 tasks.named<Test>("test") {
     useJUnitPlatform()
     finalizedBy("jacocoTestReport")

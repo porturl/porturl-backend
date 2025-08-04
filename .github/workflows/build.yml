@@ -115,7 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: native-executable
-          path: build/native/nativeCompile/*
+          path: build/native/nativeCompile/${{ steps.build_info.outputs.native-name }}
           retention-days: 7
 
   docker:
