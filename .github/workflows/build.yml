@@ -1,4 +1,4 @@
-name: Java CI with Gradle
+name: Build
 
 on:
   pull_request:
@@ -29,8 +29,8 @@ jobs:
     - name: Create jar
       run: ./gradlew bootJar
 
-    - name: Remove old latest prerelease
-      run: gh release delete latest --cleanup-tag --yes --repo $GITHUB_REPOSITORY
+    - name: Remove old snapshot prerelease
+      run: gh release delete snapshot --cleanup-tag --yes --repo $GITHUB_REPOSITORY
       env:
         GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         GITHUB_REPOSITORY: "${{ github.repository }}"
@@ -39,7 +39,7 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         token: "${{ secrets.GITHUB_TOKEN }}"
-        tag: "latest"
+        tag: "snapshot"
         prerelease: true
         name: "Development Build"
         artifacts: "build/libs/*.jar"
@@ -64,4 +64,4 @@ jobs:
         file: ./Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: friesoft/porturl-backend:latest
+        tags: friesoft/porturl-backend:snapshot
