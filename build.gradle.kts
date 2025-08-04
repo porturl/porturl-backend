@@ -140,7 +140,6 @@ graalvmNative {
             buildArgs.add("--verbose")
             buildArgs.add("-H:+ReportExceptionStackTraces")
             buildArgs.add("-H:+UnlockExperimentalVMOptions")
-            buildArgs.add("-H:+UseStringDeduplication")
             javaLauncher.set(javaToolchains.launcherFor {
                 languageVersion.set(JavaLanguageVersion.of(21))
                 vendor.set(JvmVendorSpec.GRAAL_VM)
