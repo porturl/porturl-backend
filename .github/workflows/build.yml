@@ -62,9 +62,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     outputs:
-      jar-name: ${{ steps.jar-info.outputs.jar-name }}
-      version: ${{ steps.jar-info.outputs.version }}
-      native-executable: ${{ steps.jar-info.outputs.native-executable }}
+      jar-name: ${{ steps.build_info.outputs.jar-name }}
+      native-name: ${{ steps.build_info.outputs.native-name }}
+      version: ${{ steps.build_info.outputs.version }}
+      timestamp: ${{ steps.build_info.outputs.timestamp }}
 
     steps:
       - uses: actions/checkout@v4
@@ -79,27 +80,28 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build JAR (for compatibility)
-        run: ./gradlew clean build -x test
+      - name: Build release artifacts (JAR and Native)
+        run: |
+          ./gradlew clean bootJar -x test
+          ./gradlew nativeCompile
 
-      - name: Build Native Image
-        run: ./gradlew nativeCompile
-
-      - name: Get build information
-        id: jar-info
+      - name: Prepare build information
+        id: build_info
         run: |
           jar_file=$(find build/libs -name "*.jar" -not -name "*-plain.jar" | head -n1)
           jar_name=$(basename "$jar_file")
-          native_executable=$(find build/native/nativeCompile -type f -executable | head -n1)
-          native_name=$(basename "$native_executable")
+          native_file=$(find build/native/nativeCompile -type f -executable | head -n1)
+          native_name=$(basename "$native_file")
           version=$(./gradlew properties -q | grep "version:" | awk '{print $2}')
+          timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
           echo "jar-name=$jar_name" >> $GITHUB_OUTPUT
-          echo "native-executable=$native_name" >> $GITHUB_OUTPUT
+          echo "native-name=$native_name" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
+          echo "timestamp=$timestamp" >> $GITHUB_OUTPUT
 
-          echo "Found JAR: $jar_name"
-          echo "Found Native: $native_name"
+          echo "Built JAR: $jar_name"
+          echo "Built Native: $native_name"
           echo "Version: $version"
 
       - name: Upload JAR artifact
@@ -145,6 +147,20 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Prepare Docker tags for snapshot
+        id: docker_tags
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+
+          # Snapshot tags for development builds
+          TAGS="friesoft/porturl-backend:snapshot-native"
+          TAGS="$TAGS,friesoft/porturl-backend:snapshot"
+          TAGS="$TAGS,friesoft/porturl-backend:main-${{ github.sha }}-native"
+          TAGS="$TAGS,friesoft/porturl-backend:main-${{ github.sha }}"
+
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "Docker tags: $TAGS"
+
       - name: Build and push Native Docker image
         uses: docker/build-push-action@v6
         with:
@@ -152,18 +168,16 @@ jobs:
           file: ./Dockerfile.native
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            friesoft/porturl-backend:snapshot-native
-            friesoft/porturl-backend:main-${{ github.sha }}-native
+          tags: ${{ steps.docker_tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           labels: |
             org.opencontainers.image.title=porturl-backend-native
-            org.opencontainers.image.description=PortURL Backend Native Build
+            org.opencontainers.image.description=PortURL Backend Native Application (Development Build)
             org.opencontainers.image.version=${{ needs.build.outputs.version }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ github.run_id }}
+            org.opencontainers.image.created=${{ needs.build.outputs.timestamp }}
 
   release-snapshot:
     runs-on: ubuntu-latest
@@ -178,6 +192,12 @@ jobs:
         with:
           name: jar-artifact
           path: build/libs/
+
+      - name: Download Native executable
+        uses: actions/download-artifact@v4
+        with:
+          name: native-executable
+          path: build/native/nativeCompile/
 
       - name: Remove old snapshot prerelease
         run: |
@@ -199,15 +219,44 @@ jobs:
           prerelease: true
           name: "Development Build (Snapshot)"
           body: |
-            🚧 **Development Build from main branch**
+            ## 🚧 Development Build from main branch
             
             **Commit:** ${{ github.sha }}
             **Version:** ${{ needs.build.outputs.version }}
-            **Docker Image:** `friesoft/porturl-backend:snapshot`
+            **Built:** ${{ needs.build.outputs.timestamp }}
             
-            This is an automated build from the latest main branch.
-            ⚠️ Not intended for production use.
-          artifacts: "build/libs/*.jar"
-          artifactContentType: "application/java-archive"
+            ### 📦 Available Downloads
+            - **JAR (JVM)**: `${{ needs.build.outputs.jar-name }}` - For traditional JVM deployment
+            - **Native Executable**: `${{ needs.build.outputs.native-name }}` - For containerized deployment
+
+            ### 🐳 Docker Images
+            ```bash
+            # Native image
+            docker pull friesoft/porturl-backend:snapshot
+
+            # Commit-specific native
+            docker pull friesoft/porturl-backend:main-${{ github.sha }}
+            ```
+
+            ### 🔧 Performance Benefits (Native)
+            - ⚡ **Faster startup**: ~50ms vs ~2-5s
+            - 💾 **Lower memory**: 20-50% reduction
+            - 📦 **Smaller image**: ~50MB vs ~300MB
+  
+            ⚠️ **Not intended for production use** - This is an automated development build.
+          artifacts: |
+            build/libs/*.jar
+            build/native/nativeCompile/*
+          artifactContentType: "application/octet-stream"
           makeLatest: false
           allowUpdates: true
+
+      - name: Upload build reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports-snapshot-${{ github.sha }}
+          path: |
+            build/reports/
+            build/test-results/
+          retention-days: 7
