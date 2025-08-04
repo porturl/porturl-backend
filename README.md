@@ -24,4 +24,3 @@ spring:
             issuer-uri: https://<domain>/auth/realms/<realmname>
             user-name-attribute: sub
 ```
-
