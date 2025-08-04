@@ -99,7 +99,7 @@ tasks.named<JacocoReport>("jacocoTestReport") {
 }
 
 // 🎯 COVERAGE THRESHOLDS - Adjust percentages here
-tasks.register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
     dependsOn("jacocoTestReport")
     violationRules {
         // Gesamt-Projekt Regel
