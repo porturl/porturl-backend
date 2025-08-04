@@ -1,4 +1,7 @@
 import net.researchgate.release.ReleaseExtension
+import org.gradle.api.tasks.testing.Test
+import org.gradle.testing.jacoco.tasks.JacocoReport
+import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
 
 plugins {
     java
@@ -7,6 +10,7 @@ plugins {
     id("org.graalvm.buildtools.native") version "0.11.0"
     id("net.researchgate.release") version "3.1.0"
     id("com.github.ben-manes.versions") version "0.52.0"
+    id("jacoco")
 }
 
 group = "org.friesoft.porturl"
@@ -60,7 +64,69 @@ configure<ReleaseExtension> {
 
     tagTemplate.set("v\$version")  // Creates tags like v1.0.0
 }
-tasks.withType<Test> {
+
+tasks.named<Test>("test") {
     useJUnitPlatform()
+    finalizedBy("jacocoTestReport")
 }
 
+tasks.named<JacocoReport>("jacocoTestReport") {
+    dependsOn("test")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+
+    // 🎯 EXCLUSIONS CONFIGURATION - Add/modify patterns here
+    classDirectories.setFrom(
+        files(classDirectories.files.map {
+            fileTree(it) {
+                exclude(
+                    "**/Application.class",  // Main application class
+                    "**/config/**",                      // Configuration packages
+                    "**/*Config.class",                  // Configuration classes
+                    "**/*Configuration.class",           // Spring configuration
+                    "**/dto/**",                         // Data transfer objects
+                    "**/entity/**",                      // JPA entities
+                    "**/model/**",                       // Domain models
+                    "**/*Exception.class",               // Custom exceptions
+                    "**/constant/**"                     // Constants
+                )
+            }
+        })
+    )
+}
+
+// 🎯 COVERAGE THRESHOLDS - Adjust percentages here
+tasks.register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+    dependsOn("jacocoTestReport")
+    violationRules {
+        // Gesamt-Projekt Regel
+        rule {
+            limit {
+                minimum = "0.40".toBigDecimal() // 40% overall
+            }
+        }
+
+        // Pro-Klasse Regel (verhindert "Coverage-Hiding")
+        rule {
+            element = "CLASS"
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.20".toBigDecimal() // 20% pro Klasse (weniger streng)
+            }
+        }
+
+        // Branch-Coverage (optional)
+        rule {
+            element = "CLASS"
+            limit {
+                counter = "BRANCH"
+                value = "COVEREDRATIO"
+                minimum = "0.50".toBigDecimal() // 50% if/else Coverage
+            }
+        }
+    }
+}

@@ -27,10 +27,10 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Run tests
-        run: ./gradlew test
+      - name: Run tests with coverage
+        run: ./gradlew test jacocoTestReport
 
-      - name: Upload test results
+      - name: Upload test results and coverage
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -38,7 +38,23 @@ jobs:
           path: |
             build/reports/tests/
             build/test-results/
+            build/reports/jacoco/
           retention-days: 7
+
+      - name: Add coverage to PR
+        id: jacoco
+        if: github.event_name == 'pull_request'
+        uses: madrapps/jacoco-report@v1
+        with:
+          paths: |
+            ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # 🎯 GITHUB PR THRESHOLDS - Adjust these percentages
+          min-coverage-overall: 40        # Overall project minimum (40%)
+          min-coverage-changed-files: 60  # New/changed files minimum (60%)
+          title: 'Code Coverage Report'
+          update-comment: true
+          debug-mode: false
 
   build:
     runs-on: ubuntu-latest
