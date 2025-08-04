@@ -5,12 +5,12 @@ import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
 
 plugins {
     java
-    id("org.springframework.boot") version "3.5.4"
-    id("io.spring.dependency-management") version "1.1.7"
-    id("org.graalvm.buildtools.native") version "0.11.0"
-    id("net.researchgate.release") version "3.1.0"
-    id("com.github.ben-manes.versions") version "0.52.0"
-    id("jacoco")
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.graalvm.native)
+    alias(libs.plugins.researchgate.release)
+    alias(libs.plugins.benmanes.versions)
+    jacoco
 }
 
 group = "org.friesoft.porturl"
@@ -30,30 +30,22 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
-    implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("io.micrometer:micrometer-tracing-bridge-brave")
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-data-rest")
-    compileOnly("org.projectlombok:lombok")
+    implementation(libs.bundles.spring.starters)
+    implementation(libs.micrometer.tracing.bridge.brave)
+    compileOnly(libs.lombok)
 
-    // logging
-    implementation("ch.qos.logback.access:logback-access-common:2.0.6")
-    implementation("ch.qos.logback.access:logback-access-tomcat:2.0.6")
-    implementation("ch.qos.logback:logback-classic")
-    implementation("ch.qos.logback.contrib:logback-json-classic:0.1.5")
-    implementation("ch.qos.logback.contrib:logback-jackson:0.1.5")
-    implementation("com.fasterxml.jackson.core:jackson-databind")
-    implementation("net.logstash.logback:logstash-logback-encoder:8.1")
+    // logging bundle
+    implementation(libs.bundles.logging)
 
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
-    implementation("com.h2database:h2")
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-    annotationProcessor("org.projectlombok:lombok")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.security:spring-security-test")
+    developmentOnly(libs.spring.boot.devtools)
+    runtimeOnly(libs.micrometer.registry.prometheus)
+    runtimeOnly(libs.h2) // Changed from 'implementation' to 'runtimeOnly', which is better practice for DB drivers
+
+    annotationProcessor(libs.spring.boot.configuration.processor)
+    annotationProcessor(libs.lombok)
+
+    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.security.test)
 }
 
 configure<ReleaseExtension> {
