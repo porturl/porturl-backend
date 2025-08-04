@@ -232,7 +232,7 @@ jobs:
           generateReleaseNotes: true
           artifacts: |
             build/libs/*.jar
-            build/native/nativeCompile/*
+            build/native/nativeCompile/${{ steps.build_info.outputs.native-name }}
           artifactContentType: "application/octet-stream"
           makeLatest: ${{ github.event.inputs.prerelease != 'true' }}
           skipIfReleaseExists: false
