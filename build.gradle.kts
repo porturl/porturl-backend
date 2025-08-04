@@ -130,3 +130,21 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
         }
     }
 }
+
+// GraalVM Native Image configuration
+graalvmNative {
+    binaries {
+        named("main") {
+            imageName.set("porturl-backend")
+            mainClass.set("org.friesoft.porturl.PortUrlApplication")
+            buildArgs.add("--verbose")
+            buildArgs.add("-H:+ReportExceptionStackTraces")
+            buildArgs.add("-H:+UnlockExperimentalVMOptions")
+            buildArgs.add("-H:+UseStringDeduplication")
+            javaLauncher.set(javaToolchains.launcherFor {
+                languageVersion.set(JavaLanguageVersion.of(21))
+                vendor.set(JvmVendorSpec.GRAAL_VM)
+            })
+        }
+    }
+}
