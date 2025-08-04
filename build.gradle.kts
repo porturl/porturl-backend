@@ -58,6 +58,8 @@ configure<ReleaseExtension> {
         failOnUnversionedFiles.set(false)
         requireBranch.set("main")
     }
+
+    tagTemplate.set("v\$version")  // Creates tags like v1.0.0
 }
 tasks.withType<Test> {
     useJUnitPlatform()

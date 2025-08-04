@@ -1,6 +1,8 @@
 name: Java CI with Gradle
 
 on:
+  pull_request:
+    branches: ['**']
   push:
     branches: [ "main" ]
 
@@ -40,7 +42,8 @@ jobs:
         tag: "latest"
         prerelease: true
         name: "Development Build"
-        artifacts: "build/libs/porturl-*.jar"
+        artifacts: "build/libs/*.jar"
+        artifactContentType: "application/java-archive"
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
