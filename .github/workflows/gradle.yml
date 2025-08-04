@@ -27,6 +27,12 @@ jobs:
     - name: Create jar
       run: ./gradlew bootJar
 
+    - name: Remove old latest prerelease
+      run: gh release delete latest --cleanup-tag --yes --repo $GITHUB_REPOSITORY
+      env:
+        GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        GITHUB_REPOSITORY: "${{ github.repository }}"
+
     - name: create prerelease from main branch
       uses: ncipollo/release-action@v1
       with:
