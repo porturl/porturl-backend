@@ -231,7 +231,7 @@ jobs:
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
           generateReleaseNotes: true
           artifacts: |
-            build/libs/*.jar
+            build/libs/${{ steps.build_info.outputs.jar-name }}
             build/native/nativeCompile/${{ steps.build_info.outputs.native-name }}
           artifactContentType: "application/octet-stream"
           makeLatest: ${{ github.event.inputs.prerelease != 'true' }}
@@ -242,8 +242,8 @@ jobs:
             ## 🚀 Release ${{ steps.release_info.outputs.tag }}
             
             ### 📦 Available Downloads
-            - **JAR (JVM)**: `${{ steps.build_info.outputs.jar-name }}` - For traditional JVM deployment
-            - **Native Executable**: `${{ steps.build_info.outputs.native-name }}` - For containerized deployment
+            - **JAR (JVM)**: `${{ steps.build_info.outputs.jar-name }}`
+            - **Native Executable**: `${{ steps.build_info.outputs.native-name }}`
             
             ### 🐳 Docker Images
             ```bash

@@ -226,8 +226,8 @@ jobs:
             **Built:** ${{ needs.build.outputs.timestamp }}
             
             ### 📦 Available Downloads
-            - **JAR (JVM)**: `${{ needs.build.outputs.jar-name }}` - For traditional JVM deployment
-            - **Native Executable**: `${{ needs.build.outputs.native-name }}` - For containerized deployment
+            - **JAR (JVM)**: `${{ needs.build.outputs.jar-name }}`
+            - **Native Executable**: `${{ needs.build.outputs.native-name }}`
 
             ### 🐳 Docker Images
             ```bash
@@ -245,8 +245,8 @@ jobs:
   
             ⚠️ **Not intended for production use** - This is an automated development build.
           artifacts: |
-            build/libs/*.jar
-            build/native/nativeCompile/*
+            build/libs/${{ needs.build.outputs.jar-name }}
+            build/native/nativeCompile/${{ needs.build.outputs.native-name }}
           artifactContentType: "application/octet-stream"
           makeLatest: false
           allowUpdates: true
