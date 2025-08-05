@@ -147,12 +147,12 @@ tasks.register("writeArtifactInfo") {
         val infoFile = buildDir.resolve("artifact-info.properties")
 
         val jarTask = tasks.named<BootJar>("bootJar").get()
-        val nativeTask = tasks.named("nativeCompile").get()
+        val nativeImageName = graalvmNative.binaries.named("main").get().imageName.get()
 
         infoFile.writeText(
             """
             JAR_NAME=${jarTask.archiveFileName.get()}
-            NATIVE_NAME=${nativeTask.imageName.get()}
+            NATIVE_NAME=${nativeImageName}
             """.trimIndent()
         )
     }
