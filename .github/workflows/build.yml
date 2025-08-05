@@ -68,7 +68,10 @@ jobs:
       timestamp: ${{ steps.build_info.outputs.timestamp }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up GraalVM
         uses: graalvm/setup-graalvm@v1
@@ -216,6 +219,7 @@ jobs:
           tag: "snapshot"
           prerelease: true
           name: "Development Build (Snapshot)"
+          generateReleaseNotes: true
           body: |
             ## 🚧 Development Build from main branch
             
