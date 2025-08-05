@@ -3,7 +3,6 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.tasks.JacocoReport
 import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
 import org.springframework.boot.gradle.tasks.bundling.BootJar
-import org.graalvm.buildtools.gradle.tasks.NativeCompileTask
 
 plugins {
     java
@@ -147,8 +146,8 @@ tasks.register("writeArtifactInfo") {
         val buildDir = layout.buildDirectory.get().asFile
         val infoFile = buildDir.resolve("artifact-info.properties")
 
-        val jarTask = tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar").get()
-        val nativeTask = tasks.named<org.graalvm.buildtools.gradle.tasks.NativeCompileTask>("nativeCompile").get()
+        val jarTask = tasks.named<BootJar>("bootJar").get()
+        val nativeTask = tasks.named("nativeCompile").get()
 
         infoFile.writeText(
             """
