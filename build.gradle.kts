@@ -150,10 +150,10 @@ tasks.register("writeArtifactInfo") {
         val nativeImageName = graalvmNative.binaries.named("main").get().imageName.get()
 
         infoFile.writeText(
-            """
-            JAR_NAME=${jarTask.archiveFileName.get()}
-            NATIVE_NAME=${nativeImageName}
-            """.trimIndent()
+            buildString {
+                appendLine("JAR_NAME=${jarTask.archiveFileName.get()}")
+                appendLine("NATIVE_NAME=${nativeImageName}")
+            }
         )
     }
 }
