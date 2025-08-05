@@ -2,6 +2,8 @@ import net.researchgate.release.ReleaseExtension
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.tasks.JacocoReport
 import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+import org.graalvm.buildtools.gradle.tasks.NativeCompileTask
 
 plugins {
     java
