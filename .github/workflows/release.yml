@@ -179,11 +179,10 @@ jobs:
     needs: release
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Checkout release tag
-        run: |
-          git checkout ${{ needs.release.outputs.tag }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
 
       - name: Download Native executable
         uses: actions/download-artifact@v4
@@ -252,11 +251,10 @@ jobs:
     needs: [release, docker]
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Checkout release tag
-        run: |
-          git checkout ${{ needs.release.outputs.tag }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
 
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
