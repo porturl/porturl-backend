@@ -139,3 +139,22 @@ graalvmNative {
         }
     }
 }
+
+tasks.register("writeArtifactInfo") {
+    doLast {
+        val buildDir = layout.buildDirectory.get().asFile
+        val infoFile = buildDir.resolve("artifact-info.properties")
+
+        val jarTask = tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar").get()
+        val nativeTask = tasks.named<org.graalvm.buildtools.gradle.tasks.NativeCompileTask>("nativeCompile").get()
+
+        infoFile.writeText(
+            """
+            JAR_NAME=${jarTask.archiveFileName.get()}
+            NATIVE_NAME=${nativeTask.imageName.get()}
+            """.trimIndent()
+        )
+    }
+}
+// Ensure this runs after the artifacts are built
+tasks.named("nativeCompile") { finalizedBy("writeArtifactInfo") }

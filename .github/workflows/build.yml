@@ -62,8 +62,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     outputs:
-      jar-name: ${{ steps.build_info.outputs.jar-name }}
-      native-name: ${{ steps.build_info.outputs.native-name }}
+      jar-name: ${{ steps.build_info.outputs.JAR_NAME }}
+      native-name: ${{ steps.build_info.outputs.NATIVE_NAME }}
       version: ${{ steps.build_info.outputs.version }}
       timestamp: ${{ steps.build_info.outputs.timestamp }}
 
@@ -80,42 +80,40 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build release artifacts (JAR and Native)
+      - name: Build release artifacts (JAR and Native) and get info
         run: |
-          ./gradlew clean bootJar -x test
-          ./gradlew nativeCompile
+          ./gradlew clean bootJar nativeCompile writeArtifactInfo -x test
 
       - name: Prepare build information
         id: build_info
         run: |
-          jar_file=$(find build/libs -name "*.jar" -not -name "*-plain.jar" | head -n1)
-          jar_name=$(basename "$jar_file")
-          native_file=$(find build/native/nativeCompile -type f -executable | head -n1)
-          native_name=$(basename "$native_file")
+          # Load variables from file into the shell environment
+          source build/artifact-info.properties
+
+          cat build/artifact-info.properties >> $GITHUB_OUTPUT
+
           version=$(./gradlew properties -q | grep "version:" | awk '{print $2}')
           timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          echo "jar-name=$jar_name" >> $GITHUB_OUTPUT
-          echo "native-name=$native_name" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "timestamp=$timestamp" >> $GITHUB_OUTPUT
 
-          echo "Built JAR: $jar_name"
-          echo "Built Native: $native_name"
+          echo "Built JAR: $JAR_NAME"
+          echo "Built Native: $NATIVE_NAME"
           echo "Version: $version"
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: jar-artifact
-          path: build/libs/*.jar
+          path: build/libs/${{ steps.build_info.outputs.JAR_NAME }}
           retention-days: 7
 
       - name: Upload Native executable
         uses: actions/upload-artifact@v4
         with:
           name: native-executable
-          path: build/native/nativeCompile/${{ steps.build_info.outputs.native-name }}
+          path: build/native/nativeCompile/${{ steps.build_info.outputs.NATIVE_NAME }}
           retention-days: 7
 
   docker:
