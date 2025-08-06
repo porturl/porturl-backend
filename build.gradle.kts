@@ -35,6 +35,8 @@ dependencies {
     implementation(libs.micrometer.tracing.bridge.brave)
     compileOnly(libs.lombok)
 
+    implementation(libs.springdoc.openapi.starter.webmvc.api)
+
     // logging bundle
     implementation(libs.bundles.logging)
 

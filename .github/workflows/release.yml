@@ -309,25 +309,16 @@ jobs:
 
             **Version:** ${{ needs.release.outputs.version }}
             **Built:** ${{ needs.release.outputs.timestamp }}
-            
+
             ### 📦 Available Downloads
             - **JAR (JVM)**: `${{ needs.release.outputs.jar-name }}`
             - **Native Executable**: `${{ needs.release.outputs.native-name }}`
-            
+
             ### 🐳 Docker Images
             ```bash
-            # Native image (recommended)
             docker pull friesoft/porturl-backend:${{ needs.release.outputs.version }}
-            
-            # Version-specific native
-            docker pull friesoft/porturl-backend:${{ needs.release.outputs.version }}-native
             ```
-            
-            ### 🔧 Performance Benefits (Native)
-            - ⚡ **Faster startup**: ~50ms vs ~2-5s
-            - 💾 **Lower memory**: 20-50% reduction  
-            - 📦 **Smaller image**: ~50MB vs ~300MB
-            
+
             ${{ steps.changelog.outputs.changelog_file && format('### 📋 Changelog\n{0}', steps.changelog.outputs.changelog_file) || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
 

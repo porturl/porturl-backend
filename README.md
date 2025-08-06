@@ -6,21 +6,18 @@ Spring Boot REST Backend
 
 ### POST /applications
 
-## Enable OAuth2 Security (Keycloak example)
+## Configure your oauth2 resourceserver
+src/main/resources/application-DEV.yaml
 ```
-application:
-  security:
-    enabled: true
 spring:
   security:
     oauth2:
-      client:
-        registration:
-          keycloak:
-            client-id: <placeholder>
-            client-secret: <placeholder>
-        provider:
-          keycloak:
-            issuer-uri: https://<domain>/auth/realms/<realmname>
-            user-name-attribute: sub
+      resourceserver:
+        jwt:
+          issuer-uri: https://sso.yourdomain.com/auth/realms/<yourrealm>
+```
+
+Start application using:
+```
+-Dspring.profiles.active=DEV
 ```

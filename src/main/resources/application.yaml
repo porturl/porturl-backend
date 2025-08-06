@@ -1,7 +1,10 @@
 ---
 porturl:
   security:
-    enabled: false
+    enabled: true
+  cors:
+    allowed-origins:
+      - http://localhost:4200
 logging:
   level:
     root: INFO
@@ -15,3 +18,8 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     defer-datasource-initialization: true
     generate-ddl: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://sso.yourdomain.com/auth/realms/<yourrealm>
