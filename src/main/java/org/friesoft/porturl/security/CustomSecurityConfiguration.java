@@ -10,8 +10,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -26,9 +31,9 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.cors(Customizer.withDefaults());
         if (!portUrlProperties.getSecurity().isEnabled()) {
             http
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests((authz) -> authz
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().permitAll())
@@ -36,6 +41,7 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
         } else {
             http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests((authz) -> authz
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/actuator/info").permitAll()
@@ -48,13 +54,26 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
         return http.build();
     }
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins(portUrlProperties.getCors().getAllowedOrigins().toArray(new String[0]))
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type")
-                .allowCredentials(true);
+    /**
+     * This new @Bean explicitly defines the CORS configuration for Spring Security.
+     * It's the standard and most reliable way to configure CORS for a secured application.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        // Use the allowed origins from your application properties
+        configuration.setAllowedOrigins(portUrlProperties.getCors().getAllowedOrigins());
+        // Set the allowed HTTP methods
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // Set the allowed headers
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        // Allow credentials (e.g., cookies, authorization headers)
+        configuration.setAllowCredentials(true);
+
+        // Apply this configuration to all endpoints in your application
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
 }
