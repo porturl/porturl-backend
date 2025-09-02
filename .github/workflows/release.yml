@@ -14,7 +14,7 @@ on:
           - major
           - custom
       custom_version:
-        description: 'Custom version (only if custom is selected above)'
+        description: 'Custom version (e.g., 1.2.3) - required if type is custom'
         required: false
         type: string
       prerelease:
@@ -26,11 +26,6 @@ on:
         description: 'Create as draft release'
         required: false
         default: false
-        type: boolean
-      include_changelog:
-        description: 'Include changelog in release notes'
-        required: false
-        default: true
         type: boolean
 
 permissions:
@@ -270,7 +265,6 @@ jobs:
 
       - name: Generate changelog (if enabled)
         id: changelog
-        if: github.event.inputs.include_changelog == 'true'
         run: |
           # Get previous tag for changelog
           previous_tag=$(git tag --sort=-version:refname | grep -v "${{ needs.release.outputs.tag }}" | head -n1 || echo "")
