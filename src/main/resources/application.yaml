@@ -5,6 +5,18 @@ porturl:
   cors:
     allowed-origins:
       - http://localhost:4200
+      - http://127.0.0.1:4200
+info:
+  auth:
+    issuer-uri: "${spring.security.oauth2.resourceserver.jwt.issuer-uri}"
+management:
+  info:
+    env:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: info
 logging:
   level:
     root: INFO

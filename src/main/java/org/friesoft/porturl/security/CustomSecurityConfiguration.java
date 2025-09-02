@@ -38,7 +38,8 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authz) -> authz
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                    .anyRequest().authenticated())
+                    .requestMatchers("/actuator/info").permitAll()
+                        .anyRequest().authenticated())
                         .oauth2ResourceServer((oauth2) -> oauth2
                             .jwt(Customizer.withDefaults()));
 
