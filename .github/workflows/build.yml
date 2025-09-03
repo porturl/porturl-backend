@@ -91,8 +91,8 @@ jobs:
 
       # This step installs the musl C compiler toolchain, which is required
       # by GraalVM to build a fully static native executable.
-      - name: Install musl toolchain for static linking
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Install musl toolchain for static linking and dependencies
+        run: sudo apt-get update && sudo apt-get install -y musl-tools zlib1g-dev
 
       - name: Build release artifacts (JAR and Native) and get info
         run: |
