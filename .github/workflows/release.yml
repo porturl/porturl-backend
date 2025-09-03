@@ -133,6 +133,11 @@ jobs:
         run: |
           git checkout ${{ steps.release_info.outputs.tag }}
 
+      # This step installs the musl C compiler toolchain, which is required
+      # by GraalVM to build a fully static native executable.
+      - name: Install musl toolchain for static linking
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
       - name: Build release artifacts (JAR and Native) and get info
         run: |
           ./gradlew clean bootJar nativeCompile writeArtifactInfo -x test

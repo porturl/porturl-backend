@@ -36,7 +36,6 @@ dependencies {
     compileOnly(libs.lombok)
 
     implementation(libs.springdoc.openapi.starter.webmvc.api)
-
     // logging bundle
     implementation(libs.bundles.logging)
 
@@ -135,6 +134,8 @@ graalvmNative {
             buildArgs.add("--verbose")
             buildArgs.add("-H:+ReportExceptionStackTraces")
             buildArgs.add("-H:+UnlockExperimentalVMOptions")
+            buildArgs.add("--static")
+            buildArgs.add("--libc=musl")
             javaLauncher.set(javaToolchains.launcherFor {
                 languageVersion.set(JavaLanguageVersion.of(21))
                 vendor.set(JvmVendorSpec.GRAAL_VM)
