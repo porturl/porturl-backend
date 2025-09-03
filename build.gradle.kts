@@ -132,10 +132,9 @@ graalvmNative {
             imageName.set("porturl-backend")
             mainClass.set("org.friesoft.porturl.PortUrlApplication")
             buildArgs.add("--verbose")
+            buildArgs.add("-H:+StaticExecutableWithDynamicLibC")
             buildArgs.add("-H:+ReportExceptionStackTraces")
             buildArgs.add("-H:+UnlockExperimentalVMOptions")
-            buildArgs.add("--static")
-            buildArgs.add("--libc=musl")
             javaLauncher.set(javaToolchains.launcherFor {
                 languageVersion.set(JavaLanguageVersion.of(21))
                 vendor.set(JvmVendorSpec.GRAAL_VM)
