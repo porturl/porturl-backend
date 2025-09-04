@@ -35,15 +35,13 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
             http
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests((authz) -> authz
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .anyRequest().permitAll())
+                    .anyRequest().permitAll())
                 .csrf(AbstractHttpConfigurer::disable);
         } else {
             http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests((authz) -> authz
-                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/actuator/info").permitAll()
                         .anyRequest().authenticated())
                         .oauth2ResourceServer((oauth2) -> oauth2
