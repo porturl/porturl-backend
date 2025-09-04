@@ -66,7 +66,7 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
         // Set the allowed HTTP methods
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         // Set the allowed headers
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(List.of("*"));
         // Allow credentials (e.g., cookies, authorization headers)
         configuration.setAllowCredentials(true);
 
