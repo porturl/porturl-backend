@@ -4,6 +4,9 @@ import org.friesoft.porturl.entities.Category;
 import org.friesoft.porturl.repositories.CategoryRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 @RestController
 @RequestMapping("/api/categories")
@@ -32,11 +35,24 @@ public class CategoryController {
 
     /**
      * Creates a new category.
+     * @param category The category object from the request body.
+     * @return A 201 Created response with the location of the new resource.
      */
     @PostMapping
-    public Category addCategory(@RequestBody Category category) {
-        return this.repository.save(category);
+    public ResponseEntity<Category> addCategory(@RequestBody Category category) {
+        // Ensure the ID is null so it's treated as a new entity
+        category.setId(null);
+        Category savedCategory = this.repository.save(category);
+
+        // Return a 201 Created status with a Location header
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(savedCategory.getId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(savedCategory);
     }
+
 
     /**
      * Updates an existing category's properties.

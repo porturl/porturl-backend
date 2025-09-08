@@ -11,11 +11,4 @@ import java.util.List;
  */
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
-    /**
-     * Finds all Application entities and sorts them by their 'sortOrder' field
-     * in ascending order. This provides a default, predictable ordering for the applications.
-     *
-     * @return A list of all applications, sorted by their display order.
-     */
-    List<Application> findAllByOrderBySortOrderAsc();
 }

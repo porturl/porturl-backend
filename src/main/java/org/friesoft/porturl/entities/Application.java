@@ -1,6 +1,7 @@
 package org.friesoft.porturl.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -24,21 +25,13 @@ public class Application {
     @Column(nullable = false)
     private String url;
 
-    // default display order of applications.
-    @Column(nullable = false, name = "sort_order")
-    private Integer sortOrder = 0;
-
     // an application can have multiple categories (tags).
-    @ManyToMany(fetch = FetchType.EAGER)
-    // These annotations break the recursive loop in equals/hashCode/toString
-    @EqualsAndHashCode.Exclude
+    // This defines the "one" side of the One-to-Many relationship with the join entity.
+    @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonManagedReference // Manages the "forward" part of the relationship for JSON serialization.
+    @EqualsAndHashCode.Exclude // Excludes this collection from Lombok's generated methods to prevent recursion.
     @ToString.Exclude
-    @JoinTable(
-            name = "application_categories",
-            joinColumns = @JoinColumn(name = "application_id"),
-            inverseJoinColumns = @JoinColumn(name = "category_id")
-    )
-    private Set<Category> categories = new HashSet<>();
+    private Set<ApplicationCategory> applicationCategories = new HashSet<>();
 
     @Column(nullable = true)
     private String iconLarge;

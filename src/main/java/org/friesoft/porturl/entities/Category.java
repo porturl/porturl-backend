@@ -53,11 +53,13 @@ public class Category {
     @Column(nullable = false)
     private boolean enabled = true;
 
-    // These annotations break the recursive loop
+    // This now correctly defines the "one" side of the relationship with the join entity.
+    // The 'mappedBy' value correctly points to the 'category' field
+    // within the ApplicationCategory entity.
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    @JsonIgnore // Ignored completely in JSON to prevent recursion.
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    @ManyToMany(mappedBy = "categories")
-    @JsonIgnore
-    private Set<Application> applications = new HashSet<>();
+    private Set<ApplicationCategory> applicationCategories = new HashSet<>();
 }
 
