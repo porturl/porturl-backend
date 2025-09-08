@@ -2,12 +2,11 @@ package org.friesoft.porturl.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @Entity
@@ -25,9 +24,56 @@ public class Application {
     @Column(nullable = false)
     private String url;
 
-    Application(String name, String url) {
-        this.name =  name;
-        this.url = url;
+    // default display order of applications.
+    @Column(nullable = false, name = "sort_order")
+    private Integer sortOrder = 0;
+
+    // an application can have multiple categories (tags).
+    @ManyToMany(fetch = FetchType.EAGER)
+    // These annotations break the recursive loop in equals/hashCode/toString
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @JoinTable(
+            name = "application_categories",
+            joinColumns = @JoinColumn(name = "application_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<Category> categories = new HashSet<>();
+
+    @Column(nullable = true)
+    private String iconLarge;
+
+    @Column(nullable = true)
+    private String iconMedium;
+
+    @Column(nullable = true)
+    private String iconThumbnail;
+
+    // --- Transient fields to provide full image URLs to the client ---
+
+    @Transient
+    public String getIconUrlLarge() {
+        return buildIconUrl(this.iconLarge);
     }
 
+    @Transient
+    public String getIconUrlMedium() {
+        return buildIconUrl(this.iconMedium);
+    }
+
+    @Transient
+    public String getIconUrlThumbnail() {
+        return buildIconUrl(this.iconThumbnail);
+    }
+
+    private String buildIconUrl(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/images/")
+                .path(filename)
+                .toUriString();
+    }
 }
+

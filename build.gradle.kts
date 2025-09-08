@@ -39,6 +39,8 @@ dependencies {
     // logging bundle
     implementation(libs.bundles.logging)
 
+    implementation("org.flywaydb:flyway-core")
+
     developmentOnly(libs.spring.boot.devtools)
     runtimeOnly(libs.micrometer.registry.prometheus)
     runtimeOnly(libs.h2) // Changed from 'implementation' to 'runtimeOnly', which is better practice for DB drivers

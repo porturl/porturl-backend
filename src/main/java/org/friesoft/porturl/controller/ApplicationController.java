@@ -6,6 +6,7 @@ import org.friesoft.porturl.repositories.ApplicationRepository;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@RequestMapping("/api/applications")
 public class ApplicationController {
 
     private final ApplicationRepository repository;
@@ -15,32 +16,39 @@ public class ApplicationController {
         this.repository = repository;
     }
 
-    @GetMapping("/applications")
+    @GetMapping
     public Iterable<Application> findAll() {
-        return this.repository.findAll();
+        // TODO: find a more sophisticated sorting method, but for now, we sort by the application's own sortOrder.
+        return this.repository.findAllByOrderBySortOrderAsc();
     }
 
-    @GetMapping("/applications/{id}")
+    @GetMapping("/{id}")
     public Application findOne(@PathVariable Long id) {
         return this.repository.findById(id).orElseThrow(() -> new ApplicationNotFoundException(id));
     }
 
-    @PostMapping("/applications")
+    @PostMapping
     Application addApplication(@RequestBody Application application) {
         return this.repository.save(application);
     }
 
-    @DeleteMapping(value = "/applications/{id}")
+    @DeleteMapping(value = "/{id}")
     public void deleteApplication(@PathVariable Long id) {
         this.repository.deleteById(id);
     }
 
-    @PutMapping("/applications/{id}")
+    @PutMapping("/{id}")
     Application replaceApplication(@RequestBody Application newApplication, @PathVariable Long id) {
         return repository.findById(id)
                 .map(application -> {
                     application.setName(newApplication.getName());
                     application.setUrl(newApplication.getUrl());
+                    application.setSortOrder(newApplication.getSortOrder());
+                    application.setCategories(newApplication.getCategories());
+                    application.setIconLarge(newApplication.getIconLarge());
+                    application.setIconMedium(newApplication.getIconMedium());
+                    application.setIconThumbnail(newApplication.getIconThumbnail());
+
                     return repository.save(application);
                 })
                 .orElseGet(() -> {

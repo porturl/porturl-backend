@@ -6,6 +6,8 @@ porturl:
     allowed-origins:
       - http://localhost:4200
       - http://127.0.0.1:4200
+  storage:
+    location: data/uploads
 info:
   auth:
     issuer-uri: "${spring.security.oauth2.resourceserver.jwt.issuer-uri}"
@@ -28,8 +30,7 @@ spring:
     driverClassName: org.h2.Driver
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
-    defer-datasource-initialization: true
-    generate-ddl: true
+    generate-ddl: false
   security:
     oauth2:
       resourceserver:
