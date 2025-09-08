@@ -9,7 +9,7 @@ versionsPlugin = "0.52.0"
 springdocOpenApi = "2.8.11"
 
 # Dependency Versions
-lombok = "1.18.38"
+lombok = "1.18.40"
 logbackAccess = "2.0.6"
 logbackContrib = "0.1.5"
 logstashEncoder = "8.1"
