@@ -43,6 +43,9 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests((authz) -> authz
                     .requestMatchers("/actuator/info").permitAll()
+                    // Allow public, unauthenticated GET requests to the image serving endpoint.
+                    // Security is maintained because the filenames are unguessable UUIDs.
+                    .requestMatchers(HttpMethod.GET, "/api/images/**").permitAll()
                         .anyRequest().authenticated())
                         .oauth2ResourceServer((oauth2) -> oauth2
                             .jwt(Customizer.withDefaults()));

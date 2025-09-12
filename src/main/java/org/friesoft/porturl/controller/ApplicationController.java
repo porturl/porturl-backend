@@ -10,10 +10,14 @@ import org.friesoft.porturl.repositories.ApplicationRepository;
 import org.friesoft.porturl.repositories.CategoryRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @RestController
@@ -79,8 +83,22 @@ public class ApplicationController {
         // Replace the detached collection on our new Application with the managed one.
         newApplication.setApplicationCategories(managedAppCategories);
 
-        // Now, saving the new Application will cascade correctly without causing an error.
-        return this.repository.save(newApplication);
+        Application savedApplication = this.repository.save(newApplication);
+
+        // Explicitly flush the changes to the database to ensure they are visible
+        // to subsequent transactions/requests immediately.
+        entityManager.flush();
+
+        // After saving, re-fetch the entity to ensure transient properties are loaded correctly
+        Application freshApplication = repository.findById(savedApplication.getId())
+                .orElseThrow(() -> new ApplicationNotFoundException(savedApplication.getId()));
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(freshApplication.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(freshApplication).getBody();
+
     }
 
     /**
@@ -107,7 +125,7 @@ public class ApplicationController {
     @PutMapping("/{id}")
     @Transactional
     public Application replaceApplication(@RequestBody Application newApplication, @PathVariable Long id) {
-        return repository.findById(id)
+        Application updatedApplication = repository.findById(id)
                 .map(application -> {
                     // Update simple properties
                     application.setName(newApplication.getName());
@@ -116,33 +134,49 @@ public class ApplicationController {
                     application.setIconMedium(newApplication.getIconMedium());
                     application.setIconThumbnail(newApplication.getIconThumbnail());
 
-                    // To correctly update the many-to-many relationship with the join entity,
-                    // we clear the existing collection and add the new ones.
-                    // The orphanRemoval=true on the entity will handle deleting old links.
-                    application.getApplicationCategories().clear();
+                    // 1. Create a map of the incoming category links for easy lookup.
+                    Map<Long, ApplicationCategory> incomingLinks = newApplication.getApplicationCategories().stream()
+                            .collect(Collectors.toMap(ac -> ac.getCategory().getId(), Function.identity()));
 
-                    // Re-create the links from the incoming data
-                    newApplication.getApplicationCategories().forEach(newAppCategory -> {
-                        // We need to ensure the Category is a managed entity
-                        Category managedCategory = categoryRepository.findById(newAppCategory.getCategory().getId())
+                    // 2. Remove links that are no longer present in the incoming data.
+                    application.getApplicationCategories().removeIf(
+                            existingLink -> !incomingLinks.containsKey(existingLink.getCategory().getId())
+                    );
+
+                    // 3. Update existing links and add new ones.
+                    incomingLinks.forEach((catId, incomingLink) -> {
+                        Category managedCategory = categoryRepository.findById(catId)
                                 .orElseThrow(() -> new RuntimeException("Category not found"));
 
-                        ApplicationCategory appCategory = new ApplicationCategory();
-                        appCategory.setApplication(application);
-                        appCategory.setCategory(managedCategory);
-                        appCategory.setSortOrder(newAppCategory.getSortOrder());
-
-                        application.getApplicationCategories().add(appCategory);
+                        application.getApplicationCategories().stream()
+                                .filter(link -> link.getCategory().getId().equals(catId))
+                                .findFirst()
+                                .ifPresentOrElse(
+                                        // If a link for this category already exists, just update its sort order.
+                                        existingLink -> existingLink.setSortOrder(incomingLink.getSortOrder()),
+                                        // If it's a new link, create and add it.
+                                        () -> {
+                                            ApplicationCategory newLink = new ApplicationCategory();
+                                            newLink.setApplication(application);
+                                            newLink.setCategory(managedCategory);
+                                            newLink.setSortOrder(incomingLink.getSortOrder());
+                                            application.getApplicationCategories().add(newLink);
+                                        }
+                                );
                     });
 
+                    // The save operation will now correctly handle the merged collection.
                     return repository.save(application);
                 })
-                .orElseGet(() -> {
-                    // If the application doesn't exist, create a new one with the given ID.
-                    newApplication.setId(id);
-                    newApplication.getApplicationCategories().forEach(ac -> ac.setApplication(newApplication));
-                    return repository.save(newApplication);
-                });
+                .orElseThrow(() -> new ApplicationNotFoundException(id));
+
+        // Explicitly flush the changes to the database.
+        entityManager.flush();
+
+        // After saving, re-fetch the entity to ensure transient properties are loaded correctly
+        return repository.findById(updatedApplication.getId())
+                .orElseThrow(() -> new ApplicationNotFoundException(updatedApplication.getId()));
+
     }
 
     /**
