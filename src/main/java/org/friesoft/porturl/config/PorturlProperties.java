@@ -15,7 +15,7 @@ public class PorturlProperties {
     private final Cors cors = new Cors();
     private final Security security = new Security();
     private Storage storage = new Storage();
-
+    private CleanupProperties cleanup = new CleanupProperties();
 
     @Data
     public static class Cors {
@@ -30,5 +30,11 @@ public class PorturlProperties {
     @Data
     public static class Storage {
         private String location;
+    }
+
+    @Data
+    public static class CleanupProperties {
+        private boolean enabled = true;
+        private String cron = "0 0 3 * * ?"; // Defaults to 3 AM every day
     }
 }

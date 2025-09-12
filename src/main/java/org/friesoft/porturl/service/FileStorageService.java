@@ -1,6 +1,9 @@
 package org.friesoft.porturl.service;
 
+import org.friesoft.porturl.config.CorsConfigLogger;
 import org.friesoft.porturl.config.PorturlProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -9,11 +12,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Service
 public class FileStorageService {
 
     private final Path rootLocation;
+
+    private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
 
     public FileStorageService(PorturlProperties properties) {
         String uploadDir = properties.getStorage().getLocation();
@@ -59,6 +65,26 @@ public class FileStorageService {
      */
     public Path load(String filename) {
         return this.rootLocation.resolve(filename);
+    }
+
+    /**
+     * NEW: Provides a stream of all files in the storage directory.
+     * @return A Stream of Paths.
+     */
+    public Stream<Path> listAllFiles() throws IOException {
+        return Files.walk(this.rootLocation, 1)
+                .filter(path -> !path.equals(this.rootLocation))
+                .map(this.rootLocation::relativize);
+    }
+
+    /**
+     * NEW: Deletes a file from the storage directory by its filename.
+     * @param filename The name of the file to delete.
+     */
+    public void delete(String filename) throws IOException {
+        Path fileToDelete = load(filename);
+        logger.debug("Deleting file: {}", fileToDelete);
+        Files.deleteIfExists(fileToDelete);
     }
 
     private String getFileExtension(String filename) {

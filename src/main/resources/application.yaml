@@ -8,6 +8,11 @@ porturl:
       - http://127.0.0.1:4200
   storage:
     location: data/uploads
+  cleanup:
+    # Set to true to enable the daily cleanup of orphaned images
+    enabled: false
+    # A cron expression for when the task should run. Default is 3 AM daily.
+    cron: "0 0 3 * * ?"
 info:
   auth:
     issuer-uri: "${spring.security.oauth2.resourceserver.jwt.issuer-uri}"
