@@ -13,7 +13,7 @@ lombok = "1.18.42"
 logbackAccess = "2.0.6"
 logbackContrib = "0.1.5"
 logstashEncoder = "8.1"
-h2 = "2.3.232"
+h2 = "2.4.240"
 
 [libraries]
 # Spring Boot Starters (Versions are managed by the Spring Boot BOM plugin)
