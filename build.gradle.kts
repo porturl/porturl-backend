@@ -39,6 +39,8 @@ dependencies {
     // logging bundle
     implementation(libs.bundles.logging)
 
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13")
+
     implementation("org.flywaydb:flyway-core")
 
     developmentOnly(libs.spring.boot.devtools)
