@@ -19,11 +19,11 @@ h2 = "2.4.240"
 # Spring Boot Starters (Versions are managed by the Spring Boot BOM plugin)
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
-spring-boot-starter-data-rest = { module = "org.springframework.boot:spring-boot-starter-data-rest" }
 spring-boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
 spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
 spring-boot-devtools = { module = "org.springframework.boot:spring-boot-devtools" }
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
+spring-boot-starter-tomcat = { module = "org.springframework.boot:spring-boot-starter-tomcat"}
 
 springdoc-openapi-starter-webmvc-api = { module = "org.springdoc:springdoc-openapi-starter-webmvc-api", version.ref = "springdocOpenApi"}
 
@@ -60,9 +60,9 @@ benmanes-versions = { id = "com.github.ben-manes.versions", version.ref = "versi
 spring-starters = [
     "spring-boot-starter-actuator",
     "spring-boot-starter-data-jpa",
-    "spring-boot-starter-data-rest",
     "spring-boot-starter-oauth2-resource-server",
     "spring-boot-starter-security",
+    "spring-boot-starter-tomcat"
 ]
 logging = [
     "logback-access-common",
