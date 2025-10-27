@@ -12,7 +12,7 @@ springdocOpenApi = "2.8.13"
 lombok = "1.18.42"
 logbackAccess = "2.0.6"
 logbackContrib = "0.1.5"
-logstashEncoder = "8.1"
+logstashEncoder = "9.0"
 h2 = "2.4.240"
 
 [libraries]
