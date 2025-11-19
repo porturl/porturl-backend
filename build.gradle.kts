@@ -43,6 +43,8 @@ dependencies {
 
     implementation("org.flywaydb:flyway-core")
 
+    implementation("org.keycloak:keycloak-admin-client:26.0.7")
+
     developmentOnly(libs.spring.boot.devtools)
     runtimeOnly(libs.micrometer.registry.prometheus)
     runtimeOnly(libs.h2) // Changed from 'implementation' to 'runtimeOnly', which is better practice for DB drivers

@@ -11,7 +11,7 @@ import java.util.Set;
 
 @Data
 @Entity
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Application {
@@ -42,7 +42,11 @@ public class Application {
     @Column(nullable = true)
     private String iconThumbnail;
 
-    // --- Transient fields to provide full image URLs to the client ---
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private User createdBy;
 
     @Transient
     public String getIconUrlLarge() {
@@ -69,4 +73,3 @@ public class Application {
                 .toUriString();
     }
 }
-

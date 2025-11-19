@@ -9,11 +9,11 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
@@ -24,9 +24,11 @@ import java.util.List;
 public class CustomSecurityConfiguration implements WebMvcConfigurer {
 
     private final PorturlProperties portUrlProperties;
+    private final CustomGrantedAuthoritiesExtractor authoritiesExtractor;
 
-    public CustomSecurityConfiguration(PorturlProperties portUrlProperties) {
+    public CustomSecurityConfiguration(PorturlProperties portUrlProperties, CustomGrantedAuthoritiesExtractor authoritiesExtractor) {
         this.portUrlProperties = portUrlProperties;
+        this.authoritiesExtractor = authoritiesExtractor;
     }
 
     @Bean
@@ -50,11 +52,18 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
                     .requestMatchers(HttpMethod.GET, "/api/images/**").permitAll()
                         .anyRequest().authenticated())
                         .oauth2ResourceServer((oauth2) -> oauth2
-                            .jwt(Customizer.withDefaults()));
+                            .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
             return http.build();
         }
         return http.build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authoritiesExtractor::extractAuthorities);
+        return converter;
     }
 
     /**

@@ -1,6 +1,5 @@
 package org.friesoft.porturl.service;
 
-import org.friesoft.porturl.config.CorsConfigLogger;
 import org.friesoft.porturl.config.PorturlProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +35,7 @@ public class FileStorageService {
 
     /**
      * Stores an uploaded file with a unique name, without any resizing.
+     * 
      * @param file The uploaded image file.
      * @return The unique identifier (filename) for the stored image.
      */
@@ -60,6 +60,7 @@ public class FileStorageService {
 
     /**
      * Loads a file by its unique filename.
+     * 
      * @param filename The unique identifier of the image.
      * @return The Path to the requested image file.
      */
@@ -69,6 +70,7 @@ public class FileStorageService {
 
     /**
      * NEW: Provides a stream of all files in the storage directory.
+     * 
      * @return A Stream of Paths.
      */
     public Stream<Path> listAllFiles() throws IOException {
@@ -79,6 +81,7 @@ public class FileStorageService {
 
     /**
      * NEW: Deletes a file from the storage directory by its filename.
+     * 
      * @param filename The name of the file to delete.
      */
     public void delete(String filename) throws IOException {
@@ -94,4 +97,3 @@ public class FileStorageService {
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 }
-

@@ -24,8 +24,10 @@ public class ImageController {
 
     /**
      * Endpoint for uploading a new image. The client is responsible for resizing.
+     * 
      * @param file The image file from the multipart request.
-     * @return A JSON object containing the unique identifier for the uploaded image.
+     * @return A JSON object containing the unique identifier for the uploaded
+     *         image.
      */
     @PostMapping
     public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file) {
@@ -36,6 +38,7 @@ public class ImageController {
 
     /**
      * Endpoint for serving an image by its unique filename.
+     * 
      * @param filename The unique identifier of the image.
      * @return The image file as a resource.
      */
@@ -44,6 +47,7 @@ public class ImageController {
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
         Path filePath = fileStorageService.load(filename);
         try {
+            @SuppressWarnings("null")
             Resource resource = new UrlResource(filePath.toUri());
             if (resource.exists() || resource.isReadable()) {
                 return ResponseEntity.ok()
@@ -58,4 +62,3 @@ public class ImageController {
         }
     }
 }
-

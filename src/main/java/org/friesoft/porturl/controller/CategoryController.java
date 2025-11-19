@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.lang.NonNull;
 
 import java.net.URI;
 import java.util.List;
@@ -31,7 +32,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Category> findById(@PathVariable Long id) {
+    public ResponseEntity<Category> findById(@PathVariable @NonNull Long id) {
         return repository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -39,9 +40,10 @@ public class CategoryController {
 
     /**
      * Creates a new category.
+     * 
      * @param category The category object from the request body.
      * @return A 201 Created response with the location of the new resource,
-     * or a 409 Conflict if the name already exists.
+     *         or a 409 Conflict if the name already exists.
      */
     @PostMapping
     public ResponseEntity<?> addCategory(@RequestBody Category category) {
@@ -65,12 +67,12 @@ public class CategoryController {
         }
     }
 
-
     /**
      * Updates an existing category's properties.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Category> updateCategory(@PathVariable Long id, @RequestBody Category updatedCategory) {
+    public ResponseEntity<Category> updateCategory(@PathVariable @NonNull Long id,
+            @RequestBody Category updatedCategory) {
         return repository.findById(id)
                 .map(category -> {
                     // Update all mutable fields, including the new ones.
@@ -97,12 +99,12 @@ public class CategoryController {
         var mappedCategories = new java.util.HashMap<Long, Category>();
         categoryMap.forEach(c -> mappedCategories.put(c.getId(), c));
 
-
         for (Category cat : categories) {
             mappedCategories.get(cat.getId()).setSortOrder(cat.getSortOrder());
         }
 
-        repository.saveAll(mappedCategories.values());
+        Iterable<Category> values = mappedCategories.values();
+        repository.saveAll(values);
 
         return ResponseEntity.ok().build();
     }
@@ -111,7 +113,7 @@ public class CategoryController {
      * Deletes a category by its ID.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCategory(@PathVariable @NonNull Long id) {
         if (repository.existsById(id)) {
             repository.deleteById(id);
             return ResponseEntity.ok().build();
@@ -119,4 +121,3 @@ public class CategoryController {
         return ResponseEntity.notFound().build();
     }
 }
-
