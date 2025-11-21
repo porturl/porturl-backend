@@ -1,6 +1,7 @@
 package org.friesoft.porturl.controller;
 
 import org.friesoft.porturl.dto.ApplicationCreateRequest;
+import org.friesoft.porturl.dto.ApplicationWithRolesDto;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.service.ApplicationService;
 import org.springframework.http.HttpStatus;
@@ -23,8 +24,8 @@ public class ApplicationController {
     }
 
     @GetMapping
-    public List<Application> getVisibleApplications() {
-        return applicationService.getVisibleApplications();
+    public List<ApplicationWithRolesDto> getVisibleApplications() {
+        return applicationService.getApplicationsForCurrentUser();
     }
 
     @PostMapping

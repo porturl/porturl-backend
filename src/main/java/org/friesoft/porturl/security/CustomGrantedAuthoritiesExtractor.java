@@ -30,7 +30,6 @@ public class CustomGrantedAuthoritiesExtractor {
         String providerUserId = jwt.getSubject();
         String email = jwt.getClaimAsString("email");
 
-        // Ensure a local user record exists for mapping purposes, but without storing roles.
         userRepository.findByProviderUserId(providerUserId)
             .orElseGet(() -> {
                 User newUser = new User();
@@ -39,12 +38,11 @@ public class CustomGrantedAuthoritiesExtractor {
                 return userRepository.save(newUser);
             });
 
-        // Extract roles from the "realm_access" claim in the JWT.
         Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
         if (realmAccess != null && realmAccess.containsKey("roles")) {
             List<String> roles = objectMapper.convertValue(realmAccess.get("roles"), new TypeReference<>() {});
             return roles.stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
         }
 

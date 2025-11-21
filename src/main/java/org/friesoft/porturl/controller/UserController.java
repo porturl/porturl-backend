@@ -5,6 +5,7 @@ import org.friesoft.porturl.service.UserService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,5 +34,11 @@ public class UserController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public List<User> getAllUsers() {
         return userService.findAll();
+    }
+
+    @GetMapping("/{id}/roles")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public List<String> getUserRoles(@PathVariable Long id) {
+        return userService.getUserRoles(id);
     }
 }
