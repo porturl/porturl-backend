@@ -1,6 +1,7 @@
 package org.friesoft.porturl.controller;
 
 import org.friesoft.porturl.dto.ApplicationCreateRequest;
+import org.friesoft.porturl.dto.ApplicationUpdateRequest;
 import org.friesoft.porturl.dto.ApplicationWithRolesDto;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.service.ApplicationService;
@@ -26,6 +27,17 @@ public class ApplicationController {
     @GetMapping
     public List<ApplicationWithRolesDto> getVisibleApplications() {
         return applicationService.getApplicationsForCurrentUser();
+    }
+
+    @GetMapping("/{id}")
+    public Application getApplicationById(@PathVariable Long id) {
+        return applicationService.getApplicationById(id);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public Application updateApplication(@PathVariable Long id, @RequestBody ApplicationUpdateRequest request) {
+        return applicationService.updateApplication(id, request);
     }
 
     @PostMapping

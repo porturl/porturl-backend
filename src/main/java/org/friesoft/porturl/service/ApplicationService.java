@@ -1,6 +1,8 @@
 package org.friesoft.porturl.service;
 
+import org.friesoft.porturl.controller.exceptions.ApplicationNotFoundException;
 import org.friesoft.porturl.dto.ApplicationCreateRequest;
+import org.friesoft.porturl.dto.ApplicationUpdateRequest;
 import org.friesoft.porturl.dto.ApplicationWithRolesDto;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.entities.User;
@@ -94,7 +96,7 @@ public class ApplicationService {
     public void assignRoleToUser(Long applicationId, Long userId, String role) {
         // ... (existing code remains the same)
         Application app = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Application not found"));
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         String appNameUpper = app.getName().toUpperCase().replaceAll("\\s+", "_");
@@ -108,7 +110,7 @@ public class ApplicationService {
     public void removeRoleFromUser(Long applicationId, Long userId, String role) {
         // ... (existing code remains the same)
         Application app = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Application not found"));
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         String appNameUpper = app.getName().toUpperCase().replaceAll("\\s+", "_");
@@ -150,5 +152,18 @@ public class ApplicationService {
                 })
                 .map(app -> new ApplicationWithRolesDto(app, List.of())) // Wrap in DTO with empty roles
                 .collect(Collectors.toList());
+    }
+
+    public Application getApplicationById(Long id) {
+        return applicationRepository.findById(id)
+                .orElseThrow(() -> new ApplicationNotFoundException(id));
+    }
+
+    @Transactional
+    public Application updateApplication(Long id, ApplicationUpdateRequest request) {
+        Application app = getApplicationById(id);
+        app.setName(request.getName());
+        app.setUrl(request.getUrl());
+        return applicationRepository.save(app);
     }
 }
