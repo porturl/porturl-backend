@@ -1,7 +1,7 @@
 # Minimal Dockerfile for pre-built native executable
 # Use this when the native executable is built in CI/CD
 
-FROM gcr.io/distroless/base-debian12:nonroot
+FROM gcr.io/distroless/base-debian13:nonroot
 
 # Copy the pre-built native executable
 COPY build/native/nativeCompile/porturl-backend /app
