@@ -1,19 +1,23 @@
 [versions]
 # Plugin Versions
-springBoot = "3.5.6"
+springBoot = "4.0.0"
 springDependencyManagement = "1.1.7"
-graalvmBuildtools = "0.11.1"
+graalvmBuildtools = "0.11.3"
 release = "3.1.0"
 versionsPlugin = "0.53.0"
 
-springdocOpenApi = "2.8.13"
+springdocOpenApi = "3.0.0"
 
 # Dependency Versions
 lombok = "1.18.42"
-logbackAccess = "2.0.6"
+logbackAccess = "2.0.7"
 logbackContrib = "0.1.5"
-logstashEncoder = "8.1"
+logstashEncoder = "9.0"
 h2 = "2.4.240"
+
+keycloak = "26.0.7"
+
+flyway = "11.18.0"
 
 [libraries]
 # Spring Boot Starters (Versions are managed by the Spring Boot BOM plugin)
@@ -25,7 +29,10 @@ spring-boot-devtools = { module = "org.springframework.boot:spring-boot-devtools
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
 spring-boot-starter-tomcat = { module = "org.springframework.boot:spring-boot-starter-tomcat"}
 
-springdoc-openapi-starter-webmvc-api = { module = "org.springdoc:springdoc-openapi-starter-webmvc-api", version.ref = "springdocOpenApi"}
+springdoc-openapi-starter-webmvc-api = { module = "org.springdoc:springdoc-openapi-starter-webmvc-api", version.ref = "springdocOpenApi" }
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref="springdocOpenApi" }
+
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref="flyway"}
 
 # Testing
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
@@ -41,12 +48,14 @@ logback-access-tomcat = { module = "ch.qos.logback.access:logback-access-tomcat"
 logback-classic = { module = "ch.qos.logback:logback-classic" }
 logback-contrib-json-classic = { module = "ch.qos.logback.contrib:logback-json-classic", version.ref = "logbackContrib" }
 logback-contrib-jackson = { module = "ch.qos.logback.contrib:logback-jackson", version.ref = "logbackContrib" }
-jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
+jackson-databind = { module = "tools.jackson.core:jackson-databind" }
 logstash-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstashEncoder" }
 
 # Other
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
+
+keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }

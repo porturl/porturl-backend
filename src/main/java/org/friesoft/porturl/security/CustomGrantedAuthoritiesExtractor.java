@@ -1,7 +1,7 @@
 package org.friesoft.porturl.security;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.repositories.UserRepository;
 import org.springframework.security.core.GrantedAuthority;
@@ -19,11 +19,11 @@ import java.util.stream.Collectors;
 public class CustomGrantedAuthoritiesExtractor {
 
     private final UserRepository userRepository;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
-    public CustomGrantedAuthoritiesExtractor(UserRepository userRepository, ObjectMapper objectMapper) {
+    public CustomGrantedAuthoritiesExtractor(UserRepository userRepository, JsonMapper jsonMapper) {
         this.userRepository = userRepository;
-        this.objectMapper = objectMapper;
+        this.jsonMapper = jsonMapper;
     }
 
     public Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
@@ -40,7 +40,7 @@ public class CustomGrantedAuthoritiesExtractor {
 
         Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
         if (realmAccess != null && realmAccess.containsKey("roles")) {
-            List<String> roles = objectMapper.convertValue(realmAccess.get("roles"), new TypeReference<>() {});
+            List<String> roles = jsonMapper.convertValue(realmAccess.get("roles"), new TypeReference<>() {});
             return roles.stream()
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
