@@ -1,12 +1,15 @@
 package org.friesoft.porturl.service;
 
+import jakarta.persistence.EntityManager;
 import org.friesoft.porturl.controller.exceptions.ApplicationNotFoundException;
 import org.friesoft.porturl.dto.ApplicationCreateRequest;
-import org.friesoft.porturl.dto.ApplicationUpdateRequest;
 import org.friesoft.porturl.dto.ApplicationWithRolesDto;
 import org.friesoft.porturl.entities.Application;
+import org.friesoft.porturl.entities.ApplicationCategory;
+import org.friesoft.porturl.entities.Category;
 import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.repositories.ApplicationRepository;
+import org.friesoft.porturl.repositories.CategoryRepository;
 import org.friesoft.porturl.repositories.UserRepository;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RolesResource;
@@ -21,8 +24,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,20 +36,23 @@ public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
     private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
     private final Keycloak keycloakAdminClient;
+    private final EntityManager entityManager;
 
     @Value("${keycloak.admin.realm}")
     private String realm;
 
-    public ApplicationService(ApplicationRepository applicationRepository, UserRepository userRepository, Keycloak keycloakAdminClient) {
+    public ApplicationService(ApplicationRepository applicationRepository, UserRepository userRepository, CategoryRepository categoryRepository, Keycloak keycloakAdminClient, EntityManager entityManager) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
+        this.categoryRepository = categoryRepository;
         this.keycloakAdminClient = keycloakAdminClient;
+        this.entityManager = entityManager;
     }
 
     @Transactional
     public Application createApplication(ApplicationCreateRequest request, Jwt principal) {
-        // ... (existing code remains the same)
         User creator = userRepository.findByProviderUserId(principal.getSubject())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found in local database"));
 
@@ -51,7 +60,24 @@ public class ApplicationService {
         newApp.setName(request.getName());
         newApp.setUrl(request.getUrl());
         newApp.setCreatedBy(creator);
+
+        // ** THE FIX: Restore the category linking logic **
+        if (request.getApplicationCategories() != null) {
+            Set<ApplicationCategory> managedAppCategories = new HashSet<>();
+            for (ApplicationCategory ac : request.getApplicationCategories()) {
+                Category managedCategory = categoryRepository.findById(ac.getCategory().getId())
+                        .orElseThrow(() -> new RuntimeException("Category not found with id: " + ac.getCategory().getId()));
+                ApplicationCategory newLink = new ApplicationCategory();
+                newLink.setApplication(newApp);
+                newLink.setCategory(managedCategory);
+                newLink.setSortOrder(ac.getSortOrder());
+                managedAppCategories.add(newLink);
+            }
+            newApp.setApplicationCategories(managedAppCategories);
+        }
+
         Application savedApp = applicationRepository.save(newApp);
+        entityManager.flush();
 
         createApplicationRoles(savedApp, request.getRoles());
 
@@ -60,14 +86,53 @@ public class ApplicationService {
             assignRoleToUser(savedApp.getId(), creator.getId(), highestRole);
         }
 
-        return savedApp;
+        return applicationRepository.findById(savedApp.getId()).orElseThrow(() -> new ApplicationNotFoundException(savedApp.getId()));
+    }
+    
+    @Transactional
+    public Application updateApplication(Long id, Application newApplicationData) {
+        Application updatedApplication = applicationRepository.findById(id)
+                .map(application -> {
+                    application.setName(newApplicationData.getName());
+                    application.setUrl(newApplicationData.getUrl());
+                    application.setIconLarge(newApplicationData.getIconLarge());
+                    application.setIconMedium(newApplicationData.getIconMedium());
+                    application.setIconThumbnail(newApplicationData.getIconThumbnail());
+
+                    Map<Long, ApplicationCategory> incomingLinks = newApplicationData.getApplicationCategories().stream()
+                            .collect(Collectors.toMap(ac -> ac.getCategory().getId(), Function.identity()));
+
+                    application.getApplicationCategories().removeIf(
+                            existingLink -> !incomingLinks.containsKey(existingLink.getCategory().getId())
+                    );
+
+                    incomingLinks.forEach((catId, incomingLink) -> {
+                        Category managedCategory = categoryRepository.findById(catId)
+                                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+                        application.getApplicationCategories().stream()
+                                .filter(link -> link.getCategory().getId().equals(catId))
+                                .findFirst()
+                                .ifPresentOrElse(
+                                        existingLink -> existingLink.setSortOrder(incomingLink.getSortOrder()),
+                                        () -> {
+                                            ApplicationCategory newLink = new ApplicationCategory();
+                                            newLink.setApplication(application);
+                                            newLink.setCategory(managedCategory);
+                                            newLink.setSortOrder(incomingLink.getSortOrder());
+                                            application.getApplicationCategories().add(newLink);
+                                        }
+                                );
+                    });
+                    return applicationRepository.save(application);
+                })
+                .orElseThrow(() -> new ApplicationNotFoundException(id));
+        entityManager.flush();
+        return applicationRepository.findById(updatedApplication.getId()).orElseThrow(() -> new ApplicationNotFoundException(updatedApplication.getId()));
     }
 
     private void createApplicationRoles(Application app, List<String> roleNames) {
-        // ... (existing code remains the same)
-        if (roleNames == null || roleNames.isEmpty()) {
-            return;
-        }
+        if (roleNames == null || roleNames.isEmpty()) return;
         RolesResource rolesResource = keycloakAdminClient.realm(realm).roles();
         String appNameUpper = app.getName().toUpperCase().replaceAll("\\s+", "_");
         String accessRoleName = "APP_" + appNameUpper + "_ACCESS";
@@ -85,7 +150,6 @@ public class ApplicationService {
     }
 
     private void createRoleIfNotExists(RolesResource rolesResource, String roleName, String description) {
-        // ... (existing code remains the same)
         if (rolesResource.list().stream().noneMatch(r -> r.getName().equals(roleName))) {
             RoleRepresentation newRole = new RoleRepresentation(roleName, description, false);
             rolesResource.create(newRole);
@@ -94,7 +158,6 @@ public class ApplicationService {
 
     @Transactional
     public void assignRoleToUser(Long applicationId, Long userId, String role) {
-        // ... (existing code remains the same)
         Application app = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
         User user = userRepository.findById(userId)
@@ -108,7 +171,6 @@ public class ApplicationService {
 
     @Transactional
     public void removeRoleFromUser(Long applicationId, Long userId, String role) {
-        // ... (existing code remains the same)
         Application app = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
         User user = userRepository.findById(userId)
@@ -128,7 +190,6 @@ public class ApplicationService {
 
         List<Application> allApps = applicationRepository.findAll();
 
-        // Admins see all applications and their available roles
         if (userRoles.contains("ROLE_ADMIN")) {
             List<RoleRepresentation> allRealmRoles = keycloakAdminClient.realm(realm).roles().list();
             return allApps.stream()
@@ -144,26 +205,24 @@ public class ApplicationService {
                     .collect(Collectors.toList());
         }
 
-        // Regular users see only the apps they have access to, with no role info needed
         return allApps.stream()
                 .filter(app -> {
                     String requiredRole = "APP_" + app.getName().toUpperCase().replaceAll("\\s+", "_") + "_ACCESS";
                     return userRoles.contains(requiredRole);
                 })
-                .map(app -> new ApplicationWithRolesDto(app, List.of())) // Wrap in DTO with empty roles
+                .map(app -> new ApplicationWithRolesDto(app, List.of()))
                 .collect(Collectors.toList());
     }
-
-    public Application getApplicationById(Long id) {
-        return applicationRepository.findById(id)
-                .orElseThrow(() -> new ApplicationNotFoundException(id));
+    
+    public Application findOne(Long id) {
+        return applicationRepository.findById(id).orElseThrow(() -> new ApplicationNotFoundException(id));
     }
-
-    @Transactional
-    public Application updateApplication(Long id, ApplicationUpdateRequest request) {
-        Application app = getApplicationById(id);
-        app.setName(request.getName());
-        app.setUrl(request.getUrl());
-        return applicationRepository.save(app);
+    
+    public void deleteApplication(Long id) {
+        if (applicationRepository.existsById(id)) {
+            applicationRepository.deleteById(id);
+        } else {
+            throw new ApplicationNotFoundException(id);
+        }
     }
 }

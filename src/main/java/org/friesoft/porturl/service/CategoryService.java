@@ -29,7 +29,6 @@ public class CategoryService {
             return List.of();
         }
 
-        // ** THE FIX: Extract the Application entity from the DTO before passing to the repository. **
         List<Application> visibleApps = visibleAppDtos.stream()
                 .map(ApplicationWithRolesDto::getApplication)
                 .collect(Collectors.toList());
