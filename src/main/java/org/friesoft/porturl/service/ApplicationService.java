@@ -61,7 +61,6 @@ public class ApplicationService {
         newApp.setUrl(request.getUrl());
         newApp.setCreatedBy(creator);
 
-        // ** THE FIX: Restore the category linking logic **
         if (request.getApplicationCategories() != null) {
             Set<ApplicationCategory> managedAppCategories = new HashSet<>();
             for (ApplicationCategory ac : request.getApplicationCategories()) {
@@ -129,6 +128,13 @@ public class ApplicationService {
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
         entityManager.flush();
         return applicationRepository.findById(updatedApplication.getId()).orElseThrow(() -> new ApplicationNotFoundException(updatedApplication.getId()));
+    }
+
+    @Transactional
+    public void reorderApplications(List<Application> applications) {
+        for (Application app : applications) {
+            updateApplication(app.getId(), app);
+        }
     }
 
     private void createApplicationRoles(Application app, List<String> roleNames) {

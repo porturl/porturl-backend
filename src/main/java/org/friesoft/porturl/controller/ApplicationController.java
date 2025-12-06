@@ -59,6 +59,13 @@ public class ApplicationController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/reorder")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Void> reorderApplications(@RequestBody List<Application> applications) {
+        applicationService.reorderApplications(applications);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/{applicationId}/assign/{userId}/{role}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Void> assignRoleToUser(@PathVariable Long applicationId, @PathVariable Long userId, @PathVariable String role) {

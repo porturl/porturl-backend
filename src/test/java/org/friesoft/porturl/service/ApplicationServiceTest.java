@@ -1,10 +1,12 @@
 package org.friesoft.porturl.service;
 
+import jakarta.persistence.EntityManager;
 import org.friesoft.porturl.dto.ApplicationCreateRequest;
 import org.friesoft.porturl.dto.ApplicationWithRolesDto;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.repositories.ApplicationRepository;
+import org.friesoft.porturl.repositories.CategoryRepository;
 import org.friesoft.porturl.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +28,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,9 +43,15 @@ class ApplicationServiceTest {
 
     @Mock
     private UserRepository userRepository;
+    
+    @Mock
+    private CategoryRepository categoryRepository;
 
     @Mock
     private Keycloak keycloakAdminClient;
+
+    @Mock
+    private EntityManager entityManager;
 
     // Mocks for the Keycloak client fluent API chain
     @Mock
@@ -136,6 +143,7 @@ class ApplicationServiceTest {
         request.setName("New App");
         request.setUrl("http://new.app");
         request.setRoles(List.of("admin", "viewer"));
+        request.setApplicationCategories(Collections.emptySet()); // Assume no categories for simplicity
 
         Jwt jwt = mock(Jwt.class);
         when(jwt.getSubject()).thenReturn("user-provider-id");
@@ -162,6 +170,7 @@ class ApplicationServiceTest {
         assertNotNull(result);
         assertEquals("New App", result.getName());
         verify(applicationRepository, times(1)).save(any(Application.class));
+        verify(entityManager, times(1)).flush();
         
         verify(rolesResource, times(5)).create(any(RoleRepresentation.class));
         verify(rolesResource, times(3)).get(argThat(s -> s.startsWith("ROLE_")));
