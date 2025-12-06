@@ -17,7 +17,7 @@ plugins {
 group = "org.friesoft.porturl"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
 }
 
 configurations {
@@ -36,16 +36,18 @@ dependencies {
     compileOnly(libs.lombok)
 
     implementation(libs.springdoc.openapi.starter.webmvc.api)
+    implementation(libs.springdoc.openapi.starter.webmvc.ui)
+
     // logging bundle
     implementation(libs.bundles.logging)
 
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13")
+    implementation(libs.flyway.core)
 
-    implementation("org.flywaydb:flyway-core")
+    implementation(libs.keycloak.admin.client)
 
     developmentOnly(libs.spring.boot.devtools)
     runtimeOnly(libs.micrometer.registry.prometheus)
-    runtimeOnly(libs.h2) // Changed from 'implementation' to 'runtimeOnly', which is better practice for DB drivers
+    runtimeOnly(libs.h2)
 
     annotationProcessor(libs.spring.boot.configuration.processor)
     annotationProcessor(libs.lombok)
@@ -141,7 +143,7 @@ graalvmNative {
             buildArgs.add("-H:+UnlockExperimentalVMOptions")
             buildArgs.add("-march=compatibility")
             javaLauncher.set(javaToolchains.launcherFor {
-                languageVersion.set(JavaLanguageVersion.of(21))
+                languageVersion.set(JavaLanguageVersion.of(25))
                 vendor.set(JvmVendorSpec.GRAAL_VM)
             })
         }

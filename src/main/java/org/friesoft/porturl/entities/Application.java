@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
+import org.friesoft.porturl.entities.User;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.HashSet;
@@ -11,7 +12,7 @@ import java.util.Set;
 
 @Data
 @Entity
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor // Changed from private to default (public)
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Application {
@@ -25,11 +26,9 @@ public class Application {
     @Column(nullable = false)
     private String url;
 
-    // an application can have multiple categories (tags).
-    // This defines the "one" side of the One-to-Many relationship with the join entity.
     @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JsonManagedReference // Manages the "forward" part of the relationship for JSON serialization.
-    @EqualsAndHashCode.Exclude // Excludes this collection from Lombok's generated methods to prevent recursion.
+    @JsonManagedReference
+    @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private Set<ApplicationCategory> applicationCategories = new HashSet<>();
 
@@ -42,7 +41,11 @@ public class Application {
     @Column(nullable = true)
     private String iconThumbnail;
 
-    // --- Transient fields to provide full image URLs to the client ---
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private User createdBy;
 
     @Transient
     public String getIconUrlLarge() {
@@ -69,4 +72,3 @@ public class Application {
                 .toUriString();
     }
 }
-

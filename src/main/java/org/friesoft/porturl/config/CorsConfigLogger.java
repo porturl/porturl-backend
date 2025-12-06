@@ -6,9 +6,6 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
-// Assuming your properties class is named this. Adjust if necessary.
-import org.friesoft.porturl.config.PorturlProperties;
-
 @Component
 public class CorsConfigLogger implements ApplicationRunner {
 
