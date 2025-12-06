@@ -1,10 +1,10 @@
 package org.friesoft.porturl.controller;
 
 import org.friesoft.porturl.dto.ApplicationCreateRequest;
+import org.friesoft.porturl.dto.ApplicationUpdateRequest;
 import org.friesoft.porturl.dto.ApplicationWithRolesDto;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.service.ApplicationService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -45,10 +45,10 @@ public class ApplicationController {
                 .toUri();
         return ResponseEntity.created(location).body(createdApp);
     }
-    
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public Application updateApplication(@RequestBody Application newApplicationData, @PathVariable Long id) {
+    public Application updateApplication(@RequestBody ApplicationUpdateRequest newApplicationData, @PathVariable Long id) {
         return applicationService.updateApplication(id, newApplicationData);
     }
 
@@ -78,5 +78,11 @@ public class ApplicationController {
     public ResponseEntity<Void> removeRoleFromUser(@PathVariable Long applicationId, @PathVariable Long userId, @PathVariable String role) {
         applicationService.removeRoleFromUser(applicationId, userId, role);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/roles")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public List<String> getApplicationRoles(@PathVariable Long id) {
+        return applicationService.getRolesForApplication(id);
     }
 }

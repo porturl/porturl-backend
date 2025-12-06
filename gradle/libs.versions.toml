@@ -36,6 +36,7 @@ flyway-core = { module = "org.flywaydb:flyway-core", version.ref="flyway"}
 
 # Testing
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
 spring-security-test = { module = "org.springframework.security:spring-security-test" }
 
 # Micrometer & Tracing

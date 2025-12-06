@@ -1,22 +1,18 @@
 package org.friesoft.porturl.dto;
 
+import lombok.Data;
+import org.friesoft.porturl.entities.ApplicationCategory;
+
+import java.util.List;
+import java.util.Set;
+
+@Data
 public class ApplicationUpdateRequest {
     private String name;
     private String url;
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
+    private String iconLarge;
+    private String iconMedium;
+    private String iconThumbnail;
+    private Set<ApplicationCategory> applicationCategories;
+    private List<String> availableRoles;
 }

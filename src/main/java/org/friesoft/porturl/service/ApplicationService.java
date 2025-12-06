@@ -1,8 +1,10 @@
 package org.friesoft.porturl.service;
 
 import jakarta.persistence.EntityManager;
+import jakarta.ws.rs.NotFoundException;
 import org.friesoft.porturl.controller.exceptions.ApplicationNotFoundException;
 import org.friesoft.porturl.dto.ApplicationCreateRequest;
+import org.friesoft.porturl.dto.ApplicationUpdateRequest;
 import org.friesoft.porturl.dto.ApplicationWithRolesDto;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.entities.ApplicationCategory;
@@ -87,9 +89,9 @@ public class ApplicationService {
 
         return applicationRepository.findById(savedApp.getId()).orElseThrow(() -> new ApplicationNotFoundException(savedApp.getId()));
     }
-    
+
     @Transactional
-    public Application updateApplication(Long id, Application newApplicationData) {
+    public Application updateApplication(Long id, ApplicationUpdateRequest newApplicationData) {
         Application updatedApplication = applicationRepository.findById(id)
                 .map(application -> {
                     application.setName(newApplicationData.getName());
@@ -98,31 +100,55 @@ public class ApplicationService {
                     application.setIconMedium(newApplicationData.getIconMedium());
                     application.setIconThumbnail(newApplicationData.getIconThumbnail());
 
-                    Map<Long, ApplicationCategory> incomingLinks = newApplicationData.getApplicationCategories().stream()
-                            .collect(Collectors.toMap(ac -> ac.getCategory().getId(), Function.identity()));
+                    // Handle roles
+                    List<String> existingRoles = getRolesForApplication(id);
+                    List<String> newRoles = newApplicationData.getAvailableRoles();
 
-                    application.getApplicationCategories().removeIf(
-                            existingLink -> !incomingLinks.containsKey(existingLink.getCategory().getId())
-                    );
+                    if (newRoles != null) {
+                        List<String> rolesToAdd = newRoles.stream()
+                                .filter(role -> !existingRoles.contains(role))
+                                .collect(Collectors.toList());
 
-                    incomingLinks.forEach((catId, incomingLink) -> {
-                        Category managedCategory = categoryRepository.findById(catId)
-                                .orElseThrow(() -> new RuntimeException("Category not found"));
+                        List<String> rolesToRemove = existingRoles.stream()
+                                .filter(role -> !newRoles.contains(role))
+                                .collect(Collectors.toList());
 
-                        application.getApplicationCategories().stream()
-                                .filter(link -> link.getCategory().getId().equals(catId))
-                                .findFirst()
-                                .ifPresentOrElse(
-                                        existingLink -> existingLink.setSortOrder(incomingLink.getSortOrder()),
-                                        () -> {
-                                            ApplicationCategory newLink = new ApplicationCategory();
-                                            newLink.setApplication(application);
-                                            newLink.setCategory(managedCategory);
-                                            newLink.setSortOrder(incomingLink.getSortOrder());
-                                            application.getApplicationCategories().add(newLink);
-                                        }
-                                );
-                    });
+                        if (!rolesToAdd.isEmpty()) {
+                            createApplicationRoles(application, rolesToAdd);
+                        }
+                        if (!rolesToRemove.isEmpty()) {
+                            deleteApplicationRoles(application, rolesToRemove);
+                        }
+                    }
+
+
+                    if (newApplicationData.getApplicationCategories() != null) {
+                        Map<Long, ApplicationCategory> incomingLinks = newApplicationData.getApplicationCategories().stream()
+                                .collect(Collectors.toMap(ac -> ac.getCategory().getId(), Function.identity()));
+
+                        application.getApplicationCategories().removeIf(
+                                existingLink -> !incomingLinks.containsKey(existingLink.getCategory().getId())
+                        );
+
+                        incomingLinks.forEach((catId, incomingLink) -> {
+                            Category managedCategory = categoryRepository.findById(catId)
+                                    .orElseThrow(() -> new RuntimeException("Category not found"));
+
+                            application.getApplicationCategories().stream()
+                                    .filter(link -> link.getCategory().getId().equals(catId))
+                                    .findFirst()
+                                    .ifPresentOrElse(
+                                            existingLink -> existingLink.setSortOrder(incomingLink.getSortOrder()),
+                                            () -> {
+                                                ApplicationCategory newLink = new ApplicationCategory();
+                                                newLink.setApplication(application);
+                                                newLink.setCategory(managedCategory);
+                                                newLink.setSortOrder(incomingLink.getSortOrder());
+                                                application.getApplicationCategories().add(newLink);
+                                            }
+                                    );
+                        });
+                    }
                     return applicationRepository.save(application);
                 })
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
@@ -130,17 +156,26 @@ public class ApplicationService {
         return applicationRepository.findById(updatedApplication.getId()).orElseThrow(() -> new ApplicationNotFoundException(updatedApplication.getId()));
     }
 
+
     @Transactional
     public void reorderApplications(List<Application> applications) {
         for (Application app : applications) {
-            updateApplication(app.getId(), app);
+            applicationRepository.findById(app.getId()).ifPresent(existingApp -> {
+                app.getApplicationCategories().forEach(incomingLink ->
+                    existingApp.getApplicationCategories().stream()
+                            .filter(existingLink -> existingLink.getCategory().getId().equals(incomingLink.getCategory().getId()))
+                            .findFirst()
+                            .ifPresent(existingLink -> existingLink.setSortOrder(incomingLink.getSortOrder()))
+                );
+                applicationRepository.save(existingApp);
+            });
         }
     }
 
     private void createApplicationRoles(Application app, List<String> roleNames) {
         if (roleNames == null || roleNames.isEmpty()) return;
         RolesResource rolesResource = keycloakAdminClient.realm(realm).roles();
-        String appNameUpper = app.getName().toUpperCase().replaceAll("\\s+", "_");
+        String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
         String accessRoleName = "APP_" + appNameUpper + "_ACCESS";
         createRoleIfNotExists(rolesResource, accessRoleName, "Grants basic access to " + app.getName());
         RoleRepresentation accessRole = rolesResource.get(accessRoleName).toRepresentation();
@@ -152,6 +187,29 @@ public class ApplicationService {
             String compositeRoleName = "ROLE_" + appNameUpper + "_" + roleNameUpper;
             createRoleIfNotExists(rolesResource, compositeRoleName, "User role for " + roleName + " in " + app.getName());
             rolesResource.get(compositeRoleName).addComposites(List.of(accessRole, permRole));
+        }
+    }
+
+    private void deleteApplicationRoles(Application app, List<String> roleNames) {
+        if (roleNames == null || roleNames.isEmpty()) return;
+        RolesResource rolesResource = keycloakAdminClient.realm(realm).roles();
+        String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
+
+        for (String roleName : roleNames) {
+            String roleNameUpper = roleName.toUpperCase();
+            String compositeRoleName = "ROLE_" + appNameUpper + "_" + roleNameUpper;
+            String permRoleName = "PERM_" + appNameUpper + "_" + roleNameUpper;
+
+            try {
+                rolesResource.get(compositeRoleName).remove();
+            } catch (NotFoundException e) {
+                // Role might not exist, which is fine
+            }
+            try {
+                rolesResource.get(permRoleName).remove();
+            } catch (NotFoundException e) {
+                // Role might not exist, which is fine
+            }
         }
     }
 
@@ -168,7 +226,7 @@ public class ApplicationService {
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        String appNameUpper = app.getName().toUpperCase().replaceAll("\\s+", "_");
+        String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
         String roleNameUpper = role.toUpperCase();
         String compositeRoleName = "ROLE_" + appNameUpper + "_" + roleNameUpper;
         RoleRepresentation roleToAssign = keycloakAdminClient.realm(realm).roles().get(compositeRoleName).toRepresentation();
@@ -181,7 +239,7 @@ public class ApplicationService {
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        String appNameUpper = app.getName().toUpperCase().replaceAll("\\s+", "_");
+        String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
         String roleNameUpper = role.toUpperCase();
         String compositeRoleName = "ROLE_" + appNameUpper + "_" + roleNameUpper;
         RoleRepresentation roleToRemove = keycloakAdminClient.realm(realm).roles().get(compositeRoleName).toRepresentation();
@@ -200,7 +258,7 @@ public class ApplicationService {
             List<RoleRepresentation> allRealmRoles = keycloakAdminClient.realm(realm).roles().list();
             return allApps.stream()
                     .map(app -> {
-                        String appPrefix = "ROLE_" + app.getName().toUpperCase().replaceAll("\\s+", "_") + "_";
+                        String appPrefix = "ROLE_" + app.getName().toUpperCase().replaceAll("\s+", "_") + "_";
                         List<String> availableRoles = allRealmRoles.stream()
                                 .map(RoleRepresentation::getName)
                                 .filter(name -> name.startsWith(appPrefix))
@@ -213,22 +271,34 @@ public class ApplicationService {
 
         return allApps.stream()
                 .filter(app -> {
-                    String requiredRole = "APP_" + app.getName().toUpperCase().replaceAll("\\s+", "_") + "_ACCESS";
+                    String requiredRole = "APP_" + app.getName().toUpperCase().replaceAll("\s+", "_") + "_ACCESS";
                     return userRoles.contains(requiredRole);
                 })
                 .map(app -> new ApplicationWithRolesDto(app, List.of()))
                 .collect(Collectors.toList());
     }
-    
+
     public Application findOne(Long id) {
         return applicationRepository.findById(id).orElseThrow(() -> new ApplicationNotFoundException(id));
     }
-    
+
     public void deleteApplication(Long id) {
         if (applicationRepository.existsById(id)) {
             applicationRepository.deleteById(id);
         } else {
             throw new ApplicationNotFoundException(id);
         }
+    }
+
+    public List<String> getRolesForApplication(Long applicationId) {
+        Application app = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+        List<RoleRepresentation> allRealmRoles = keycloakAdminClient.realm(realm).roles().list();
+        String appPrefix = "ROLE_" + app.getName().toUpperCase().replaceAll("\s+", "_") + "_";
+        return allRealmRoles.stream()
+                .map(RoleRepresentation::getName)
+                .filter(name -> name.startsWith(appPrefix))
+                .map(name -> name.substring(appPrefix.length()).toLowerCase())
+                .collect(Collectors.toList());
     }
 }
