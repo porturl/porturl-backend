@@ -5,8 +5,10 @@ import org.keycloak.admin.client.KeycloakBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.ImportRuntimeHints;
 
 @Configuration
+@ImportRuntimeHints(KeycloakNativeHints.class)
 public class KeycloakAdminConfig {
 
     @Value("${keycloak.admin.server-url}")

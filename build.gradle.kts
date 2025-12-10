@@ -17,7 +17,7 @@ plugins {
 group = "org.friesoft.porturl"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_21
 }
 
 configurations {
@@ -144,7 +144,7 @@ graalvmNative {
             buildArgs.add("-H:+UnlockExperimentalVMOptions")
             buildArgs.add("-march=compatibility")
             javaLauncher.set(javaToolchains.launcherFor {
-                languageVersion.set(JavaLanguageVersion.of(25))
+                languageVersion.set(JavaLanguageVersion.of(21))
                 vendor.set(JvmVendorSpec.GRAAL_VM)
             })
         }
