@@ -11,5 +11,7 @@ public class KeycloakNativeHints implements RuntimeHintsRegistrar {
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         hints.reflection().registerType(TypeReference.of("org.keycloak.admin.client.spi.ResteasyClientClassicProvider"),
                 hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
+        hints.reflection().registerType(TypeReference.of("org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl"),
+                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
     }
 }
