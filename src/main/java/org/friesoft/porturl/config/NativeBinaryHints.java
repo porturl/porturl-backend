@@ -5,13 +5,17 @@ import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.aot.hint.TypeReference;
 
-public class KeycloakNativeHints implements RuntimeHintsRegistrar {
+public class NativeBinaryHints implements RuntimeHintsRegistrar {
 
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         hints.reflection().registerType(TypeReference.of("org.keycloak.admin.client.spi.ResteasyClientClassicProvider"),
                 hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
         hints.reflection().registerType(TypeReference.of("org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl"),
+                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
+        hints.reflection().registerType(TypeReference.of("org.jboss.resteasy.resteasy_jaxrs.i18n.Messages"),
+                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
+        hints.reflection().registerType(TypeReference.of("org.jboss.resteasy.resteasy_jaxrs.i18n.Messages_$bundle"),
                 hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
     }
 }

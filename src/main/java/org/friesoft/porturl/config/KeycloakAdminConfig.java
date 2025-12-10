@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportRuntimeHints;
 
 @Configuration
-@ImportRuntimeHints(KeycloakNativeHints.class)
+@ImportRuntimeHints(NativeBinaryHints.class)
 public class KeycloakAdminConfig {
 
     @Value("${keycloak.admin.server-url}")
