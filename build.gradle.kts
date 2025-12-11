@@ -41,8 +41,6 @@ dependencies {
     // logging bundle
     implementation(libs.bundles.logging)
 
-    implementation(libs.flyway.core)
-
     implementation(libs.keycloak.admin.client)
 
     developmentOnly(libs.spring.boot.devtools)
