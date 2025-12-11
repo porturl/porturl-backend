@@ -16,6 +16,8 @@ public class NativeBinaryHints implements RuntimeHintsRegistrar {
                 hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
         hints.reflection().registerType(TypeReference.of("org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl"),
                 hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
+        hints.reflection().registerType(TypeReference.of("org.jboss.resteasy.client.jaxrs.internal.proxy.ProxyBuilderImpl"),
+                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
 
         // Resteasy Core (jaxrs)
         registerResteasyLogging(hints, "org.jboss.resteasy.resteasy_jaxrs.i18n.Messages");
