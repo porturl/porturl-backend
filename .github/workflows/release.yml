@@ -190,6 +190,12 @@ jobs:
           name: native-executable
           path: build/native/nativeCompile/
 
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: jar-artifact
+          path: build/libs/
+
       - name: Make executable runnable
         run: chmod +x build/native/nativeCompile/*
 
@@ -211,22 +217,24 @@ jobs:
           VERSION="${{ needs.release.outputs.version }}"
           IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
 
-          # Base tags for native image
-          TAGS="friesoft/porturl-backend:$VERSION-native,friesoft/porturl-backend:$VERSION"
+          # Tags for Native image
+          TAGS_NATIVE="friesoft/porturl-backend:$VERSION-native"
 
-          # Add latest tag only for stable releases
-          if [ "$IS_PRERELEASE" != "true" ]; then
-            TAGS="$TAGS,friesoft/porturl-backend:latest"
-          fi
+          # Tags for JVM image
+          TAGS_JVM="friesoft/porturl-backend:$VERSION,friesoft/porturl-backend:$VERSION-jvm"
 
-          # Add major.minor tag for stable releases
+          # Add latest/major.minor tags only for stable releases
           if [ "$IS_PRERELEASE" != "true" ]; then
+            TAGS_JVM="$TAGS_JVM,friesoft/porturl-backend:latest"
+
             MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
-            TAGS="$TAGS,friesoft/porturl-backend:$MAJOR_MINOR"
+            TAGS_JVM="$TAGS_JVM,friesoft/porturl-backend:$MAJOR_MINOR"
           fi
 
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
-          echo "Docker tags: $TAGS"
+          echo "tags_native=$TAGS_NATIVE" >> $GITHUB_OUTPUT
+          echo "tags_jvm=$TAGS_JVM" >> $GITHUB_OUTPUT
+          echo "Docker tags (Native): $TAGS_NATIVE"
+          echo "Docker tags (JVM): $TAGS_JVM"
 
       - name: Build and push Docker images (Native)
         uses: docker/build-push-action@v6
@@ -235,12 +243,30 @@ jobs:
           file: ./Dockerfile.native
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.docker_tags.outputs.tags }}
+          tags: ${{ steps.docker_tags.outputs.tags_native }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           labels: |
             org.opencontainers.image.title=porturl-backend-native
             org.opencontainers.image.description=PortURL Backend Native Application
+            org.opencontainers.image.version=${{ needs.release.outputs.version }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ needs.release.outputs.timestamp }}
+
+      - name: Build and push Docker images (JVM)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.docker_tags.outputs.tags_jvm }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          labels: |
+            org.opencontainers.image.title=porturl-backend-jvm
+            org.opencontainers.image.description=PortURL Backend JVM Application
             org.opencontainers.image.version=${{ needs.release.outputs.version }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
