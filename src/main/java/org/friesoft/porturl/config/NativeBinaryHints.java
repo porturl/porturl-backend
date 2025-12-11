@@ -16,6 +16,6 @@ public class NativeBinaryHints implements RuntimeHintsRegistrar {
         hints.reflection().registerType(TypeReference.of("org.jboss.resteasy.resteasy_jaxrs.i18n.Messages"),
                 hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
         hints.reflection().registerType(TypeReference.of("org.jboss.resteasy.resteasy_jaxrs.i18n.Messages_$bundle"),
-                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
+                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.PUBLIC_FIELDS));
     }
 }
