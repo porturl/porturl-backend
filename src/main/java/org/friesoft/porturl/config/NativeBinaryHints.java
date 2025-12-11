@@ -12,6 +12,8 @@ public class NativeBinaryHints implements RuntimeHintsRegistrar {
         // Keycloak & Resteasy Core
         hints.reflection().registerType(TypeReference.of("org.keycloak.admin.client.spi.ResteasyClientClassicProvider"),
                 hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
+        hints.reflection().registerType(TypeReference.of("org.keycloak.admin.client.JacksonProvider"),
+                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
         hints.reflection().registerType(TypeReference.of("org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl"),
                 hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS));
 
