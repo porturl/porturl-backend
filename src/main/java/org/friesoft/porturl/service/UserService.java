@@ -44,6 +44,23 @@ public class UserService {
         return Collections.emptyList();
     }
 
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        return findByProviderUserId(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    public User updateCurrentUser(org.friesoft.porturl.dto.UserUpdateRequest request) {
+        User user = getCurrentUser();
+        if (request.getImage() != null) {
+            user.setImage(request.getImage());
+        }
+        return userRepository.save(user);
+    }
+
     public List<User> findAll() {
         return userRepository.findAll();
     }

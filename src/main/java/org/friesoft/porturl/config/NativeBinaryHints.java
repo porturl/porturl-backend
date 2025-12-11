@@ -46,10 +46,10 @@ public class NativeBinaryHints implements RuntimeHintsRegistrar {
         // Messages -> _$bundle, LogMessages -> _$logger
         if (baseClassName.endsWith("Messages") && !baseClassName.endsWith("LogMessages")) {
              hints.reflection().registerType(TypeReference.of(baseClassName + "_$bundle"),
-                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.PUBLIC_FIELDS));
+                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.ACCESS_PUBLIC_FIELDS));
         } else if (baseClassName.endsWith("LogMessages")) {
              hints.reflection().registerType(TypeReference.of(baseClassName + "_$logger"),
-                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.PUBLIC_FIELDS));
+                hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.ACCESS_PUBLIC_FIELDS));
         }
     }
 }

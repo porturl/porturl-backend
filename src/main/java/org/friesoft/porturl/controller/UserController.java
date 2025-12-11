@@ -23,6 +23,16 @@ public class UserController {
         this.userService = userService;
     }
 
+    @GetMapping("/current")
+    public User getCurrentUser() {
+        return userService.getCurrentUser();
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/current")
+    public User updateCurrentUser(@org.springframework.web.bind.annotation.RequestBody org.friesoft.porturl.dto.UserUpdateRequest request) {
+        return userService.updateCurrentUser(request);
+    }
+
     @GetMapping("/roles")
     public Collection<String> getCurrentUserRoles() {
         return userService.getCurrentUserRoles().stream()

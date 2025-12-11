@@ -31,4 +31,19 @@ public class User {
     @Getter
     private String providerUserId;
 
+    @Column
+    @Setter
+    @Getter
+    private String image;
+
+    @Transient
+    public String getImageUrl() {
+        if (image == null || image.isBlank()) {
+            return null;
+        }
+        return org.springframework.web.servlet.support.ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/images/")
+                .path(image)
+                .toUriString();
+    }
 }
