@@ -185,13 +185,13 @@ jobs:
           ref: ${{ needs.release.outputs.tag }}
 
       - name: Download Native executable
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: native-executable
           path: build/native/nativeCompile/
 
       - name: Download JAR artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: jar-artifact
           path: build/libs/
@@ -283,13 +283,13 @@ jobs:
           ref: ${{ needs.release.outputs.tag }}
 
       - name: Download JAR artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: jar-artifact
           path: build/libs/
 
       - name: Download Native executable
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: native-executable
           path: build/native/nativeCompile/
