@@ -2,7 +2,9 @@ package org.friesoft.porturl.service;
 
 import org.friesoft.porturl.config.PorturlProperties;
 import org.friesoft.porturl.entities.Application;
+import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.repositories.ApplicationRepository;
+import org.friesoft.porturl.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,13 +23,16 @@ public class ImageCleanupService {
     private static final Logger logger = LoggerFactory.getLogger(ImageCleanupService.class);
 
     private final ApplicationRepository applicationRepository;
+    private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final PorturlProperties properties;
 
     public ImageCleanupService(ApplicationRepository applicationRepository,
+                               UserRepository userRepository,
                                FileStorageService fileStorageService,
                                PorturlProperties properties) {
         this.applicationRepository = applicationRepository;
+        this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.properties = properties;
     }
@@ -54,6 +59,12 @@ public class ImageCleanupService {
             if (app.getIconMedium() != null) activeImageFiles.add(app.getIconMedium());
             if (app.getIconThumbnail() != null) activeImageFiles.add(app.getIconThumbnail());
         });
+
+        Iterable<User> users = userRepository.findAll();
+        users.forEach(user -> {
+            if (user.getImage() != null) activeImageFiles.add(user.getImage());
+        });
+
         logger.debug("Found {} active image references in the database.", activeImageFiles.size());
 
         // 2. Compare with files on disk and delete orphans
