@@ -4,11 +4,14 @@ import org.friesoft.porturl.service.FileStorageService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -50,8 +53,20 @@ public class ImageController {
             @SuppressWarnings("null")
             Resource resource = new UrlResource(filePath.toUri());
             if (resource.exists() || resource.isReadable()) {
+                String contentType = null;
+                try {
+                    contentType = Files.probeContentType(filePath);
+                } catch (IOException e) {
+                    // Fallback to default
+                }
+
+                if (contentType == null) {
+                    contentType = "application/octet-stream";
+                }
+
                 return ResponseEntity.ok()
                         .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                        .contentType(MediaType.parseMediaType(contentType))
                         .body(resource);
             } else {
                 // Return a 404 Not Found if the file doesn't exist
