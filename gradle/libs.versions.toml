@@ -15,7 +15,7 @@ logbackContrib = "0.1.5"
 logstashEncoder = "9.0"
 h2 = "2.4.240"
 
-keycloak = "26.0.7"
+keycloak = "26.0.8"
 
 [libraries]
 # Spring Boot Starters (Versions are managed by the Spring Boot BOM plugin)
