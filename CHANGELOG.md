@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/porturl/porturl-backend/compare/v0.2.0...v0.2.1) (2026-01-17)
+
+
+### Bug Fixes
+
+* very important docs fix ([2f3e5f9](https://github.com/porturl/porturl-backend/commit/2f3e5f9d6161a5c296b1ce3154aa5cc4ef376a63))
+
 ## [0.2.0](https://github.com/porturl/porturl-backend/compare/v0.1.0...v0.2.0) (2026-01-17)
 
 
