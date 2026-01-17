@@ -3,6 +3,7 @@
     ".": {
       "release-type": "java",
       "package-name": "porturl-backend",
+      "skip-snapshot": true,
       "extra-files": [
         "gradle.properties"
       ]
