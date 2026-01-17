@@ -8,6 +8,9 @@ on:
       tag:
         description: 'The tag to build (e.g. v1.0.0)'
         required: true
+      sha:
+        description: 'The commit SHA to build'
+        required: false
 
 permissions:
   id-token: write
@@ -30,7 +33,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          ref: ${{ inputs.sha || inputs.tag || github.event.release.tag_name }}
 
       - name: Set up GraalVM
         uses: graalvm/setup-graalvm@v1
@@ -106,6 +109,13 @@ jobs:
             "build/libs/${{ steps.build_info.outputs.JAR_NAME }}" \
             "build/native/nativeCompile/${{ steps.build_info.outputs.NATIVE_NAME }}" \
             --clobber
+
+      - name: Publish Release (Undraft)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release_info.outputs.tag }}
+        run: |
+          gh release edit "$TAG" --draft=false --repo ${{ github.repository }}
 
 
 

@@ -24,9 +24,9 @@ jobs:
       - name: Trigger Publish Workflow
         if: ${{ steps.release.outputs.release_created }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          gh workflow run publish-release.yml --repo ${{ github.repository }} -f tag=${{ steps.release.outputs.tag_name }}
+          gh workflow run publish-release.yml --repo ${{ github.repository }} -f tag=${{ steps.release.outputs.tag_name }} -f sha=${{ github.sha }}
           
           # Add 'autorelease: published' label to the PR that triggered this release
           # We find the PR associated with the merge commit
