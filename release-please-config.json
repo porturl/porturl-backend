@@ -1,0 +1,11 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "java",
+      "package-name": "porturl-backend",
+      "extra-files": [
+        "gradle.properties"
+      ]
+    }
+  }
+}

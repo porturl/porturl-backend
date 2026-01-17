@@ -1,4 +1,3 @@
-import net.researchgate.release.ReleaseExtension
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.tasks.JacocoReport
 import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
@@ -9,9 +8,21 @@ plugins {
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.graalvm.native)
-    alias(libs.plugins.researchgate.release)
     alias(libs.plugins.benmanes.versions)
     jacoco
+}
+
+// Logic to append commit hash to version if not a tagged release
+val isRelease = System.getenv("GITHUB_REF")?.startsWith("refs/tags/v") == true
+if (!isRelease) {
+    val gitCommit = providers.exec {
+        commandLine("git", "rev-parse", "--short", "HEAD")
+    }.standardOutput.asText.get().trim()
+    
+    // Only append if we can get the commit hash (e.g. git is available)
+    if (gitCommit.isNotEmpty()) {
+        version = "$version-$gitCommit"
+    }
 }
 
 group = "org.friesoft.porturl"
@@ -53,15 +64,6 @@ dependencies {
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.spring.boot.starter.webmvc.test)
     testImplementation(libs.spring.security.test)
-}
-
-configure<ReleaseExtension> {
-    with(git) {
-        failOnUnversionedFiles.set(false)
-        requireBranch.set("main")
-    }
-
-    tagTemplate.set("v\$version")  // Creates tags like v1.0.0
 }
 
 tasks.named<Test>("test") {
