@@ -173,13 +173,10 @@ jobs:
 
           # Snapshot tags for development builds (Native)
           TAGS_NATIVE="friesoft/porturl-backend:snapshot-native"
-          TAGS_NATIVE="$TAGS_NATIVE,friesoft/porturl-backend:main-${{ github.sha }}-native"
 
           # Snapshot tags for development builds (JVM)
           TAGS_JVM="friesoft/porturl-backend:snapshot"
-          TAGS_JVM="$TAGS_JVM,friesoft/porturl-backend:main-${{ github.sha }}"
           TAGS_JVM="$TAGS_JVM,friesoft/porturl-backend:snapshot-jvm"
-          TAGS_JVM="$TAGS_JVM,friesoft/porturl-backend:main-${{ github.sha }}-jvm"
 
           echo "tags_native=$TAGS_NATIVE" >> $GITHUB_OUTPUT
           echo "tags_jvm=$TAGS_JVM" >> $GITHUB_OUTPUT
