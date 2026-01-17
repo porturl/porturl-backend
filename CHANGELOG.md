@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/porturl/porturl-backend/compare/v0.2.1...v0.2.2) (2026-01-17)
+
+
+### Bug Fixes
+
+* use draft release until artifacts have been published, use personal access token ([fc35520](https://github.com/porturl/porturl-backend/commit/fc35520224d98109bd5312a13c5e0e85cae52bc9))
+
 ## [0.2.1](https://github.com/porturl/porturl-backend/compare/v0.2.0...v0.2.1) (2026-01-17)
 
 
