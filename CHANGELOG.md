@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/porturl/porturl-backend/compare/v0.9.1...v0.9.2) (2026-01-18)
+
+
+### Bug Fixes
+
+* do the tagging immediately to prevent wrong release-please pr changelogs ([d46b079](https://github.com/porturl/porturl-backend/commit/d46b0797bf752f797119f85c3f07e4f8bbeb3113))
+
 ## [0.9.1](https://github.com/porturl/porturl-backend/compare/v0.9.0...v0.9.1) (2026-01-18)
 
 
