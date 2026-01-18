@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/porturl/porturl-backend/compare/v0.7.0...v0.7.1) (2026-01-18)
+
+
+### Bug Fixes
+
+* use separate step for finishing release ([b8e721c](https://github.com/porturl/porturl-backend/commit/b8e721ca42f3d63cb64fc3424c8b5f879f6356f1))
+
 ## [0.7.0](https://github.com/porturl/porturl-backend/compare/v0.6.0...v0.7.0) (2026-01-18)
 
 
