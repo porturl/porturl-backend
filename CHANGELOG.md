@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.1](https://github.com/porturl/porturl-backend/compare/v0.9.0...v0.9.1) (2026-01-18)
+
+
+### Bug Fixes
+
+* add missing permissions ([bac7576](https://github.com/porturl/porturl-backend/commit/bac7576646f782adc76e7b63e060a0ba06be1b12))
+* readd missing github release information ([03def02](https://github.com/porturl/porturl-backend/commit/03def0248644cef1fc51c7c84f7eb2224488e665))
+
 ## [0.9.0](https://github.com/porturl/porturl-backend/compare/v0.8.0...v0.9.0) (2026-01-18)
 
 
