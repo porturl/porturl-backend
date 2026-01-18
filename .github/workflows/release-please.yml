@@ -37,3 +37,7 @@ jobs:
 
           # Trigger publish workflow
           gh workflow run publish-release.yml --repo ${{ github.repository }} -f tag=$TAG_NAME -f sha=${{ github.sha }}
+
+          # Cleanup: Close any "Giant PRs" that release-please might have created because it ignored the Draft Release.
+          # Since we just released, there should be no pending release PRs.
+          gh pr list --repo ${{ github.repository }} --label "autorelease: pending" --state open --json number --jq '.[].number' | xargs -r -I {} gh pr close {} --repo ${{ github.repository }} --delete-branch
