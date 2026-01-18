@@ -129,7 +129,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          ref: ${{ needs.build-and-publish.outputs.tag }}
+          ref: ${{ inputs.sha || inputs.tag || needs.build-and-publish.outputs.tag }}
 
       - name: Download Artifacts
         uses: actions/download-artifact@v7
