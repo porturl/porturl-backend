@@ -95,8 +95,17 @@ jobs:
           # Fetch existing body
           EXISTING_BODY=$(gh release view "$TAG" --json body --template '{{.body}}')
           
-          # Create new body with Docker info appended
+          # Create new body with Custom Header + Existing Body + Docker info
           NEW_BODY=$(cat <<EOF
+          ## 🚀 Release $TAG
+
+          **Version:** $VERSION
+          **Built:** ${{ steps.build_info.outputs.timestamp }}
+
+          ### 📦 Available Downloads
+          - **JAR (JVM)**: \`${{ steps.build_info.outputs.JAR_NAME }}\`
+          - **Native Executable**: \`${{ steps.build_info.outputs.NATIVE_NAME }}\`
+
           $EXISTING_BODY
 
           ---
