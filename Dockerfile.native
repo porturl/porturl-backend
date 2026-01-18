@@ -4,7 +4,7 @@
 FROM gcr.io/distroless/base-debian13:nonroot
 
 # Copy the pre-built native executable
-COPY build/native/nativeCompile/porturl-backend /app
+COPY build/native/nativeCompile/porturl-backend* /app
 
 # Expose port
 EXPOSE 80

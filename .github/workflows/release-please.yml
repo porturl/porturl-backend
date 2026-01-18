@@ -27,11 +27,3 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           gh workflow run publish-release.yml --repo ${{ github.repository }} -f tag=${{ steps.release.outputs.tag_name }} -f sha=${{ github.sha }}
-          
-          # Add 'autorelease: published' label to the PR that triggered this release
-          # We search for the merged PR associated with the commit
-          PR_NUMBER=$(gh search prs "${{ github.sha }}" --repo ${{ github.repository }} --merged --json number --jq '.[0].number')
-          if [ -n "$PR_NUMBER" ]; then
-            gh label create "autorelease: published" --repo ${{ github.repository }} --color "2cbe4e" --description "Release has been published" || true
-            gh pr edit "$PR_NUMBER" --repo ${{ github.repository }} --add-label "autorelease: published"
-          fi

@@ -13,7 +13,7 @@ plugins {
 }
 
 // Logic to append commit hash to version if not a tagged release
-val isRelease = System.getenv("GITHUB_REF")?.startsWith("refs/tags/v") == true
+val isRelease = System.getenv("GITHUB_REF")?.startsWith("refs/tags/v") == true || System.getenv("IS_RELEASE_BUILD") == "true"
 if (!isRelease) {
     val gitCommit = providers.exec {
         commandLine("git", "rev-parse", "--short", "HEAD")
@@ -136,7 +136,7 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
 graalvmNative {
     binaries {
         named("main") {
-            imageName.set("porturl-backend")
+            imageName.set("porturl-backend-${project.version}")
             mainClass.set("org.friesoft.porturl.PortUrlApplication")
             buildArgs.add("--verbose")
             buildArgs.add("-H:+StaticExecutableWithDynamicLibC")
