@@ -106,13 +106,13 @@ jobs:
           )
           
           # Update release notes and upload artifacts
-                    gh release edit "$TAG" --notes "$NEW_BODY"
-                    gh release upload "$TAG" \
-                      "build/libs/${{ steps.build_info.outputs.JAR_NAME }}" \
-                      "build/native/nativeCompile/${{ steps.build_info.outputs.NATIVE_NAME }}" \
-                      --clobber
-          
-                - name: Upload Artifacts for Docker Job
+          gh release edit "$TAG" --notes "$NEW_BODY"
+          gh release upload "$TAG" \
+            "build/libs/${{ steps.build_info.outputs.JAR_NAME }}" \
+            "build/native/nativeCompile/${{ steps.build_info.outputs.NATIVE_NAME }}" \
+            --clobber
+
+      - name: Upload Artifacts for Docker Job
         uses: actions/upload-artifact@v6
         with:
           name: build-artifacts
@@ -141,8 +141,8 @@ jobs:
         run: |
           mkdir -p build/libs
           mkdir -p build/native/nativeCompile
-          cp artifacts/build/libs/* build/libs/
-          cp artifacts/build/native/nativeCompile/* build/native/nativeCompile/
+          cp artifacts/libs/* build/libs/
+          cp artifacts/native/nativeCompile/* build/native/nativeCompile/
           chmod +x build/native/nativeCompile/*
 
       - name: Set up QEMU
