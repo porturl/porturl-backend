@@ -32,5 +32,6 @@ jobs:
           # We search for the merged PR associated with the commit
           PR_NUMBER=$(gh search prs "${{ github.sha }}" --repo ${{ github.repository }} --merged --json number --jq '.[0].number')
           if [ -n "$PR_NUMBER" ]; then
+            gh label create "autorelease: published" --repo ${{ github.repository }} --color "2cbe4e" --description "Release has been published" || true
             gh pr edit "$PR_NUMBER" --repo ${{ github.repository }} --add-label "autorelease: published"
           fi
