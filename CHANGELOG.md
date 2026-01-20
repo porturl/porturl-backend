@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/porturl/porturl-backend/compare/v0.10.0...v0.10.1) (2026-01-20)
+
+
+### Bug Fixes
+
+* workaround for github.com/googleapis/release-please/issues/1650 ([7a47d65](https://github.com/porturl/porturl-backend/commit/7a47d65a066cf822b1601fed05e9887e39890fa7))
+
 ## [0.10.0](https://github.com/porturl/porturl-backend/compare/v0.9.2...v0.10.0) (2026-01-18)
 
 
