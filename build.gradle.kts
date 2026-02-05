@@ -9,7 +9,16 @@ plugins {
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.graalvm.native)
     alias(libs.plugins.benmanes.versions)
+    alias(libs.plugins.sonarqube)
     jacoco
+}
+
+sonar {
+    properties {
+        property("sonar.projectKey", "porturl_porturl-backend")
+        property("sonar.organization", "porturl")
+        property("sonar.coverage.jacoco.xmlReportPaths", "${layout.buildDirectory.get().asFile}/reports/jacoco/test/jacocoTestReport.xml")
+    }
 }
 
 // Logic to append commit hash to version if not a tagged release

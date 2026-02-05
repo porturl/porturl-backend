@@ -61,6 +61,12 @@ jobs:
           update-comment: true
           debug-mode: false
 
+      - name: SonarCloud Scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonar
+
   build:
     name: 🏗️ Build Release Artifact
     runs-on: ubuntu-latest
