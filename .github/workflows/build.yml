@@ -224,6 +224,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, build, docker]
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      packages: write
 
     steps:
       - uses: actions/checkout@v6
@@ -242,20 +245,19 @@ jobs:
 
       - name: Remove old snapshot prerelease
         run: |
-          if gh release view snapshot --repo $GITHUB_REPOSITORY >/dev/null 2>&1; then
-            gh release delete snapshot --cleanup-tag --yes --repo $GITHUB_REPOSITORY
+          if gh release view snapshot --repo ${{ github.repository }} >/dev/null 2>&1; then
+            gh release delete snapshot --cleanup-tag --yes --repo ${{ github.repository }}
             echo "Deleted existing snapshot release"
           else
             echo "No existing snapshot release found"
           fi
         env:
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          GITHUB_REPOSITORY: "${{ github.repository }}"
+          GH_TOKEN: "${{ github.token }}"
 
       - name: Create snapshot prerelease
         uses: ncipollo/release-action@v1
         with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
+          token: "${{ github.token }}"
           tag: "snapshot"
           prerelease: true
           name: "Development Build (Snapshot)"
