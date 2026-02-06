@@ -1,11 +1,15 @@
 <configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <include resource="org/springframework/boot/logging/logback/otlp-appender.xml" />
+
     <appender name="json" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeMdc>true</includeMdc>
         </encoder>
     </appender>
 
-    <root level="all">
+    <root level="INFO">
         <appender-ref ref="json" />
+        <appender-ref ref="OTLP" />
     </root>
 </configuration>

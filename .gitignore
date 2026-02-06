@@ -38,3 +38,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Local environment files
+.env*
+!.env.alloy.sample
+!testdata/env.template

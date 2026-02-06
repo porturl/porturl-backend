@@ -51,7 +51,9 @@ repositories {
 }
 
 dependencies {
+    implementation(platform(libs.spring.cloud.bom))
     implementation(libs.bundles.spring.starters)
+    implementation(libs.spring.cloud.gateway.server.webmvc)
     implementation(libs.micrometer.tracing.bridge.brave)
     compileOnly(libs.lombok)
 
@@ -60,11 +62,13 @@ dependencies {
 
     // logging bundle
     implementation(libs.bundles.logging)
+    implementation(libs.opentelemetry.exporter.otlp)
 
     implementation(libs.keycloak.admin.client)
 
     developmentOnly(libs.spring.boot.devtools)
     runtimeOnly(libs.micrometer.registry.prometheus)
+    runtimeOnly(libs.micrometer.registry.otlp)
     runtimeOnly(libs.h2)
 
     annotationProcessor(libs.spring.boot.configuration.processor)

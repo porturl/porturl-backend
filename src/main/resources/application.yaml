@@ -6,6 +6,8 @@ porturl:
     allowed-origins:
       - http://localhost:4200
       - http://127.0.0.1:4200
+  otel:
+    alloy-url: ${PORTURL_OTEL_ALLOY_URL:http://localhost:4318}
   storage:
     location: data/uploads
   cleanup:
@@ -23,11 +25,31 @@ management:
   endpoints:
     web:
       exposure:
-        include: info
+        include: info, health, metrics, prometheus
+  otlp:
+    logging:
+      export:
+        enabled: true
+        url: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:http://localhost:8080/otlp/v1/logs}
+    metrics:
+      export:
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://localhost:8080/otlp/v1/metrics}
+        step: 1m
+    tracing:
+      export:
+        url: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:8080/otlp/v1/traces}
+  tracing:
+    enabled: ${MANAGEMENT_TRACING_ENABLED:true}
+    sampling:
+      probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
+    propagation:
+      type: W3C, B3
 logging:
   level:
     root: INFO
 spring:
+  application:
+    name: porturl-backend
   main:
     banner-mode: "off"
   datasource:

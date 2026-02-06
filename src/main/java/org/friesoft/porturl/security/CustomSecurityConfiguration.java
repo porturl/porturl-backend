@@ -47,6 +47,8 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
                     .requestMatchers("/actuator/info").permitAll()
                     .requestMatchers("/swagger-ui/**").permitAll()
                     .requestMatchers("/v3/api-docs*/**").permitAll()
+                    // Allow telemetry from the mobile app
+                    .requestMatchers(HttpMethod.POST, "/otlp/**").permitAll()
                     // Allow public, unauthenticated GET requests to the image serving endpoint.
                     // Security is maintained because the filenames are unguessable UUIDs.
                     .requestMatchers(HttpMethod.GET, "/api/images/**").permitAll()

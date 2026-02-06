@@ -12,12 +12,18 @@ public class PorturlProperties {
 
     private final Cors cors = new Cors();
     private final Security security = new Security();
+    private final Otel otel = new Otel();
     private Storage storage = new Storage();
     private CleanupProperties cleanup = new CleanupProperties();
 
     @Data
     public static class Cors {
         private List<String> allowedOrigins = Arrays.asList("http://localhost:4200");
+    }
+
+    @Data
+    public static class Otel {
+        private String alloyUrl = "http://localhost:4318";
     }
 
     @Data

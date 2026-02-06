@@ -95,9 +95,33 @@ The following endpoints are available for managing users and applications. They 
     -   **Description:** Revokes a user's specific role for an application.
     -   **Example:** `.../unassign/123/456/admin` - Removes the `ROLE_MY_NEW_APP_ADMIN` composite role from the user.
 
+## 4. Monitoring & Observability (Grafana Cloud)
+
+The backend is instrumented with OpenTelemetry (OTLP) to send metrics and traces to Grafana Cloud.
+
+### Configuration
+By default, monitoring is enabled. The backend sends all telemetry (logs, metrics, and traces) to a local **Grafana Alloy** instance. It also acts as a proxy for the Android app's telemetry.
+
+#### Telemetry Flow
+1.  **Android App** -> `Backend (:8080/otlp)` -> `Alloy (:4318)` -> **Grafana Cloud**
+2.  **Backend** -> `Alloy (:4318)` -> **Grafana Cloud**
+
+| Property | Environment Variable | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `management.tracing.enabled` | `MANAGEMENT_TRACING_ENABLED` | `true` | Enables/disables tracing. |
+| `management.otlp.metrics.export.url` | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | `http://localhost:4318/v1/metrics` | Local Alloy endpoint. |
+| `management.tracing.sampling.probability` | `MANAGEMENT_TRACING_SAMPLING_PROBABILITY` | `1.0` | Sampling rate (1.0 = 100%). |
+
+### Running with Monitoring
+To start the backend with monitoring enabled:
+```bash
+export GRAFANA_OTLP_AUTH="Basic <your_base64_auth_token>"
+./gradlew bootRun
+```
+
 ---
 
-## 4. Administrator Workflow: How to Grant App Access
+## 5. Administrator Workflow: How to Grant App Access
 
 ### Scenario: An admin wants to grant "Bob" admin rights for the new "Grafana" app.
 
