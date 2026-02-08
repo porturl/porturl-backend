@@ -10,7 +10,7 @@ import java.util.Set;
 
 @Data
 @Entity
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Category {
@@ -53,13 +53,15 @@ public class Category {
     @Column(nullable = false)
     private boolean enabled = true;
 
-    // This now correctly defines the "one" side of the relationship with the join entity.
-    // The 'mappedBy' value correctly points to the 'category' field
-    // within the ApplicationCategory entity.
-    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
-    @JsonIgnore // Ignored completely in JSON to prevent recursion.
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "application_category_link",
+        joinColumns = @JoinColumn(name = "category_id"),
+        inverseJoinColumns = @JoinColumn(name = "application_id")
+    )
+    @OrderColumn(name = "sort_order")
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private Set<ApplicationCategory> applicationCategories = new HashSet<>();
+    private java.util.List<Application> applications = new java.util.ArrayList<>();
 }
 

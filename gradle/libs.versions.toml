@@ -7,6 +7,7 @@ graalvmBuildtools = "0.11.4"
 release = "3.1.0"
 versionsPlugin = "0.53.0"
 sonarqube = "7.2.2.6593"
+openapi-generator = "7.11.0"
 
 springdocOpenApi = "3.0.1"
 
@@ -19,6 +20,8 @@ logstashEncoder = "9.0"
 h2 = "2.4.240"
 
 keycloak = "26.0.8"
+jakarta-validation = "3.1.1"
+swagger-annotations = "2.2.28"
 
 [libraries]
 # Spring Boot Starters (Versions are managed by the Spring Boot BOM plugin)
@@ -64,6 +67,8 @@ lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak" }
+jakarta-validation = { module = "jakarta.validation:jakarta.validation-api", version.ref = "jakarta-validation" }
+swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "swagger-annotations" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
@@ -72,6 +77,7 @@ graalvm-native = { id = "org.graalvm.buildtools.native", version.ref = "graalvmB
 researchgate-release = { id = "net.researchgate.release", version.ref = "release" }
 benmanes-versions = { id = "com.github.ben-manes.versions", version.ref = "versionsPlugin" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+openapi-generator = { id = "org.openapi.generator", version.ref = "openapi-generator" }
 
 # Bundles are a convenient way to group dependencies that are used together.
 [bundles]

@@ -101,6 +101,7 @@ class ApplicationServiceTest {
         mockSecurityContext(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
         Application app1 = new Application();
         app1.setName("Grafana");
+        app1.setId(1L);
         when(applicationRepository.findAll()).thenReturn(List.of(app1));
 
         RoleRepresentation role1 = new RoleRepresentation("ROLE_GRAFANA_ADMIN", "", false);
@@ -123,8 +124,10 @@ class ApplicationServiceTest {
         mockSecurityContext(Set.of(new SimpleGrantedAuthority("APP_GRAFANA_ACCESS")));
         Application app1 = new Application();
         app1.setName("Grafana");
+        app1.setId(1L);
         Application app2 = new Application();
         app2.setName("Other App");
+        app2.setId(2L);
         when(applicationRepository.findAll()).thenReturn(List.of(app1, app2));
 
         // Act
@@ -143,7 +146,7 @@ class ApplicationServiceTest {
         request.setName("New App");
         request.setUrl("http://new.app");
         request.setRoles(List.of("admin", "viewer"));
-        request.setApplicationCategories(Collections.emptySet()); // Assume no categories for simplicity
+        request.setCategories(Collections.emptyList()); // Assume no categories for simplicity
 
         Jwt jwt = mock(Jwt.class);
         when(jwt.getSubject()).thenReturn("user-provider-id");
@@ -157,6 +160,7 @@ class ApplicationServiceTest {
         Application appToSave = new Application();
         appToSave.setName(request.getName());
         appToSave.setUrl(request.getUrl());
+        appToSave.setId(100L);
         when(applicationRepository.save(any(Application.class))).thenReturn(appToSave);
         when(applicationRepository.findById(any())).thenReturn(Optional.of(appToSave));
 

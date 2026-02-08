@@ -3,11 +3,7 @@ package org.friesoft.porturl.service;
 import jakarta.persistence.EntityManager;
 import jakarta.ws.rs.NotFoundException;
 import org.friesoft.porturl.controller.exceptions.ApplicationNotFoundException;
-import org.friesoft.porturl.dto.ApplicationCreateRequest;
-import org.friesoft.porturl.dto.ApplicationUpdateRequest;
-import org.friesoft.porturl.dto.ApplicationWithRolesDto;
 import org.friesoft.porturl.entities.Application;
-import org.friesoft.porturl.entities.ApplicationCategory;
 import org.friesoft.porturl.entities.Category;
 import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.repositories.ApplicationRepository;
@@ -26,11 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,7 +50,7 @@ public class ApplicationService {
     }
 
     @Transactional
-    public Application createApplication(ApplicationCreateRequest request, Jwt principal) {
+    public Application createApplication(org.friesoft.porturl.dto.ApplicationCreateRequest request, Jwt principal) {
         User creator = userRepository.findByProviderUserId(principal.getSubject())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found in local database"));
 
@@ -63,18 +59,13 @@ public class ApplicationService {
         newApp.setUrl(request.getUrl());
         newApp.setCreatedBy(creator);
 
-        if (request.getApplicationCategories() != null) {
-            Set<ApplicationCategory> managedAppCategories = new HashSet<>();
-            for (ApplicationCategory ac : request.getApplicationCategories()) {
-                Category managedCategory = categoryRepository.findById(ac.getCategory().getId())
-                        .orElseThrow(() -> new RuntimeException("Category not found with id: " + ac.getCategory().getId()));
-                ApplicationCategory newLink = new ApplicationCategory();
-                newLink.setApplication(newApp);
-                newLink.setCategory(managedCategory);
-                newLink.setSortOrder(ac.getSortOrder());
-                managedAppCategories.add(newLink);
+        if (request.getCategories() != null) {
+            for (org.friesoft.porturl.dto.Category catDto : request.getCategories()) {
+                Category managedCategory = categoryRepository.findById(catDto.getId())
+                        .orElseThrow(() -> new RuntimeException("Category not found with id: " + catDto.getId()));
+                managedCategory.getApplications().add(newApp);
+                newApp.getCategories().add(managedCategory);
             }
-            newApp.setApplicationCategories(managedAppCategories);
         }
 
         Application savedApp = applicationRepository.save(newApp);
@@ -91,7 +82,7 @@ public class ApplicationService {
     }
 
     @Transactional
-    public Application updateApplication(Long id, ApplicationUpdateRequest newApplicationData) {
+    public Application updateApplication(Long id, org.friesoft.porturl.dto.ApplicationUpdateRequest newApplicationData) {
         Application updatedApplication = applicationRepository.findById(id)
                 .map(application -> {
                     application.setName(newApplicationData.getName());
@@ -122,31 +113,27 @@ public class ApplicationService {
                     }
 
 
-                    if (newApplicationData.getApplicationCategories() != null) {
-                        Map<Long, ApplicationCategory> incomingLinks = newApplicationData.getApplicationCategories().stream()
-                                .collect(Collectors.toMap(ac -> ac.getCategory().getId(), Function.identity()));
+                    if (newApplicationData.getCategories() != null) {
+                        Set<Long> incomingCatIds = newApplicationData.getCategories().stream()
+                                .map(org.friesoft.porturl.dto.Category::getId)
+                                .collect(Collectors.toSet());
 
-                        application.getApplicationCategories().removeIf(
-                                existingLink -> !incomingLinks.containsKey(existingLink.getCategory().getId())
-                        );
+                        // Remove from old categories
+                        application.getCategories().forEach(cat -> {
+                            if (!incomingCatIds.contains(cat.getId())) {
+                                cat.getApplications().remove(application);
+                            }
+                        });
+                        application.getCategories().removeIf(cat -> !incomingCatIds.contains(cat.getId()));
 
-                        incomingLinks.forEach((catId, incomingLink) -> {
-                            Category managedCategory = categoryRepository.findById(catId)
-                                    .orElseThrow(() -> new RuntimeException("Category not found"));
-
-                            application.getApplicationCategories().stream()
-                                    .filter(link -> link.getCategory().getId().equals(catId))
-                                    .findFirst()
-                                    .ifPresentOrElse(
-                                            existingLink -> existingLink.setSortOrder(incomingLink.getSortOrder()),
-                                            () -> {
-                                                ApplicationCategory newLink = new ApplicationCategory();
-                                                newLink.setApplication(application);
-                                                newLink.setCategory(managedCategory);
-                                                newLink.setSortOrder(incomingLink.getSortOrder());
-                                                application.getApplicationCategories().add(newLink);
-                                            }
-                                    );
+                        // Add to new categories
+                        incomingCatIds.forEach(catId -> {
+                            if (application.getCategories().stream().noneMatch(c -> c.getId().equals(catId))) {
+                                Category managedCategory = categoryRepository.findById(catId)
+                                        .orElseThrow(() -> new RuntimeException("Category not found"));
+                                managedCategory.getApplications().add(application);
+                                application.getCategories().add(managedCategory);
+                            }
                         });
                     }
                     return applicationRepository.save(application);
@@ -158,16 +145,17 @@ public class ApplicationService {
 
 
     @Transactional
-    public void reorderApplications(List<Application> applications) {
-        for (Application app : applications) {
-            applicationRepository.findById(app.getId()).ifPresent(existingApp -> {
-                app.getApplicationCategories().forEach(incomingLink ->
-                    existingApp.getApplicationCategories().stream()
-                            .filter(existingLink -> existingLink.getCategory().getId().equals(incomingLink.getCategory().getId()))
-                            .findFirst()
-                            .ifPresent(existingLink -> existingLink.setSortOrder(incomingLink.getSortOrder()))
-                );
-                applicationRepository.save(existingApp);
+    public void reorderApplications(List<org.friesoft.porturl.dto.Category> categories) {
+        for (org.friesoft.porturl.dto.Category catDto : categories) {
+            categoryRepository.findById(catDto.getId()).ifPresent(category -> {
+                if (catDto.getApplications() != null) {
+                    List<Application> reorderedApps = new ArrayList<>();
+                    for (org.friesoft.porturl.dto.Application appDto : catDto.getApplications()) {
+                        applicationRepository.findById(appDto.getId()).ifPresent(reorderedApps::add);
+                    }
+                    category.setApplications(reorderedApps);
+                    categoryRepository.save(category);
+                }
             });
         }
     }
@@ -241,12 +229,12 @@ public class ApplicationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
         String roleNameUpper = role.toUpperCase();
-        String compositeRoleName = "ROLE_" + appNameUpper + "_" + roleNameUpper;
+        String compositeRoleName = "ROLE_" + appNameUpper + "_"+ roleNameUpper;
         RoleRepresentation roleToRemove = keycloakAdminClient.realm(realm).roles().get(compositeRoleName).toRepresentation();
         keycloakAdminClient.realm(realm).users().get(user.getProviderUserId()).roles().realmLevel().remove(List.of(roleToRemove));
     }
 
-    public List<ApplicationWithRolesDto> getApplicationsForCurrentUser() {
+    public List<org.friesoft.porturl.dto.ApplicationWithRolesDto> getApplicationsForCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Set<String> userRoles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -264,7 +252,10 @@ public class ApplicationService {
                                 .filter(name -> name.startsWith(appPrefix))
                                 .map(name -> name.substring(appPrefix.length()).toLowerCase())
                                 .collect(Collectors.toList());
-                        return new ApplicationWithRolesDto(app, availableRoles);
+                        org.friesoft.porturl.dto.ApplicationWithRolesDto dto = new org.friesoft.porturl.dto.ApplicationWithRolesDto();
+                        dto.setApplication(mapToDto(app));
+                        dto.setAvailableRoles(availableRoles);
+                        return dto;
                     })
                     .collect(Collectors.toList());
         }
@@ -274,8 +265,41 @@ public class ApplicationService {
                     String requiredRole = "APP_" + app.getName().toUpperCase().replaceAll("\s+", "_") + "_ACCESS";
                     return userRoles.contains(requiredRole);
                 })
-                .map(app -> new ApplicationWithRolesDto(app, List.of()))
+                .map(app -> {
+                    org.friesoft.porturl.dto.ApplicationWithRolesDto dto = new org.friesoft.porturl.dto.ApplicationWithRolesDto();
+                    dto.setApplication(mapToDto(app));
+                    dto.setAvailableRoles(List.of());
+                    return dto;
+                })
                 .collect(Collectors.toList());
+    }
+
+    public org.friesoft.porturl.dto.Application mapToDto(Application app) {
+        org.friesoft.porturl.dto.Application dto = new org.friesoft.porturl.dto.Application();
+        dto.setId(app.getId());
+        dto.setName(app.getName());
+        dto.setUrl(app.getUrl());
+        dto.setIconLarge(app.getIconLarge());
+        dto.setIconMedium(app.getIconMedium());
+        dto.setIconThumbnail(app.getIconThumbnail());
+        dto.setIconUrlLarge(app.getIconUrlLarge());
+        dto.setIconUrlMedium(app.getIconUrlMedium());
+        dto.setIconUrlThumbnail(app.getIconUrlThumbnail());
+        if (app.getCategories() != null) {
+            dto.setCategories(app.getCategories().stream().map(this::mapCategoryToDtoSimple).collect(Collectors.toList()));
+        }
+        return dto;
+    }
+
+    private org.friesoft.porturl.dto.Category mapCategoryToDtoSimple(Category category) {
+        org.friesoft.porturl.dto.Category dto = new org.friesoft.porturl.dto.Category();
+        dto.setId(category.getId());
+        dto.setName(category.getName());
+        dto.setIcon(category.getIcon());
+        dto.setEnabled(category.isEnabled());
+        dto.setSortOrder(category.getSortOrder());
+        dto.setApplicationSortMode(org.friesoft.porturl.dto.Category.ApplicationSortModeEnum.fromValue(category.getApplicationSortMode().name()));
+        return dto;
     }
 
     public Application findOne(Long id) {

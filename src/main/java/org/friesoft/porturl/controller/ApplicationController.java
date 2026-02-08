@@ -1,23 +1,18 @@
 package org.friesoft.porturl.controller;
 
-import org.friesoft.porturl.dto.ApplicationCreateRequest;
-import org.friesoft.porturl.dto.ApplicationUpdateRequest;
-import org.friesoft.porturl.dto.ApplicationWithRolesDto;
+import org.friesoft.porturl.api.ApplicationApi;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.service.ApplicationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/applications")
-public class ApplicationController {
+public class ApplicationController implements ApplicationApi {
 
     private final ApplicationService applicationService;
 
@@ -25,64 +20,61 @@ public class ApplicationController {
         this.applicationService = applicationService;
     }
 
-    @GetMapping
-    public List<ApplicationWithRolesDto> getVisibleApplications() {
-        return applicationService.getApplicationsForCurrentUser();
+    @Override
+    public ResponseEntity<List<org.friesoft.porturl.dto.ApplicationWithRolesDto>> getVisibleApplications() {
+        return ResponseEntity.ok(applicationService.getApplicationsForCurrentUser());
     }
 
-    @GetMapping("/{id}")
-    public Application findOne(@PathVariable Long id) {
-        return applicationService.findOne(id);
+    @Override
+    public ResponseEntity<org.friesoft.porturl.dto.Application> findOneApplication(Long id) {
+        return ResponseEntity.ok(applicationService.mapToDto(applicationService.findOne(id)));
     }
 
-    @PostMapping
+    @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<Application> createApplication(@RequestBody ApplicationCreateRequest request, @AuthenticationPrincipal Jwt principal) {
+    public ResponseEntity<org.friesoft.porturl.dto.Application> createApplication(@RequestBody org.friesoft.porturl.dto.ApplicationCreateRequest request) {
+        Jwt principal = (Jwt) org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Application createdApp = applicationService.createApplication(request, principal);
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(createdApp.getId())
-                .toUri();
-        return ResponseEntity.created(location).body(createdApp);
+        return ResponseEntity.status(201).body(applicationService.mapToDto(createdApp));
     }
 
-    @PutMapping("/{id}")
+    @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public Application updateApplication(@RequestBody ApplicationUpdateRequest newApplicationData, @PathVariable Long id) {
-        return applicationService.updateApplication(id, newApplicationData);
+    public ResponseEntity<org.friesoft.porturl.dto.Application> updateApplication(Long id, @RequestBody org.friesoft.porturl.dto.ApplicationUpdateRequest request) {
+        return ResponseEntity.ok(applicationService.mapToDto(applicationService.updateApplication(id, request)));
     }
 
-    @DeleteMapping("/{id}")
+    @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<Void> deleteApplication(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteApplication(Long id) {
         applicationService.deleteApplication(id);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/reorder")
+    @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<Void> reorderApplications(@RequestBody List<Application> applications) {
-        applicationService.reorderApplications(applications);
+    public ResponseEntity<Void> reorderApplications(@RequestBody List<org.friesoft.porturl.dto.Category> categories) {
+        applicationService.reorderApplications(categories);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{applicationId}/assign/{userId}/{role}")
+    @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<Void> assignRoleToUser(@PathVariable Long applicationId, @PathVariable Long userId, @PathVariable String role) {
+    public ResponseEntity<Void> assignRoleToUser(Long applicationId, Long userId, String role) {
         applicationService.assignRoleToUser(applicationId, userId, role);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{applicationId}/unassign/{userId}/{role}")
+    @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<Void> removeRoleFromUser(@PathVariable Long applicationId, @PathVariable Long userId, @PathVariable String role) {
+    public ResponseEntity<Void> removeRoleFromUser(Long applicationId, Long userId, String role) {
         applicationService.removeRoleFromUser(applicationId, userId, role);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/{id}/roles")
+    @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public List<String> getApplicationRoles(@PathVariable Long id) {
-        return applicationService.getRolesForApplication(id);
+    public ResponseEntity<List<String>> getApplicationRoles(Long id) {
+        return ResponseEntity.ok(applicationService.getRolesForApplication(id));
     }
 }

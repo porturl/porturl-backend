@@ -10,7 +10,36 @@ plugins {
     alias(libs.plugins.graalvm.native)
     alias(libs.plugins.benmanes.versions)
     alias(libs.plugins.sonarqube)
+    alias(libs.plugins.openapi.generator)
     jacoco
+}
+
+openApiGenerate {
+    generatorName.set("spring")
+    inputSpec.set("$projectDir/src/main/resources/openapi.yaml")
+    outputDir.set(layout.buildDirectory.dir("generated/openapi").get().asFile.path)
+    apiPackage.set("org.friesoft.porturl.api")
+    modelPackage.set("org.friesoft.porturl.dto")
+    configOptions.set(mapOf(
+        "interfaceOnly" to "true",
+        "useSpringBoot3" to "true",
+        "useJakartaEe" to "true",
+        "openApiNullable" to "false",
+        "generateAliasAsModel" to "true",
+        "useTags" to "true"
+    ))
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir(layout.buildDirectory.dir("generated/openapi/src/main/java"))
+        }
+    }
+}
+
+tasks.named("compileJava") {
+    dependsOn("openApiGenerate")
 }
 
 sonar {
@@ -65,6 +94,8 @@ dependencies {
     implementation(libs.opentelemetry.exporter.otlp)
 
     implementation(libs.keycloak.admin.client)
+    implementation(libs.jakarta.validation)
+    implementation(libs.swagger.annotations)
 
     developmentOnly(libs.spring.boot.devtools)
     runtimeOnly(libs.micrometer.registry.prometheus)
@@ -166,8 +197,8 @@ graalvmNative {
 
 tasks.register("writeArtifactInfo") {
     doLast {
-        val buildDir = layout.buildDirectory.get().asFile
-        val infoFile = buildDir.resolve("artifact-info.properties")
+        val buildDirectory = layout.buildDirectory.get().asFile
+        val infoFile = buildDirectory.resolve("artifact-info.properties")
 
         val jarTask = tasks.named<BootJar>("bootJar").get()
         val nativeImageName = graalvmNative.binaries.named("main").get().imageName.get()

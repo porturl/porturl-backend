@@ -26,6 +26,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
      * @param applications The list of applications the user is allowed to see.
      * @return A sorted list of visible and relevant categories.
      */
-    @Query("SELECT DISTINCT c FROM Category c JOIN c.applicationCategories ac WHERE ac.application IN :applications AND c.enabled = true ORDER BY c.sortOrder ASC")
-    List<Category> findDistinctByApplicationInAndEnabledTrueOrderBySortOrderAsc(@Param("applications") List<Application> applications);
+    @Query("SELECT DISTINCT c FROM Category c JOIN c.applications a WHERE a IN :applications AND c.enabled = true ORDER BY c.sortOrder ASC")
+    List<Category> findDistinctByApplicationInAndEnabledTrueOrderBySortOrderAsc(@Param("applications") java.util.Collection<Application> applications);
 }

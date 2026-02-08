@@ -25,11 +25,10 @@ public class Application {
     @Column(nullable = false)
     private String url;
 
-    @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JsonManagedReference
+    @ManyToMany(mappedBy = "applications", fetch = FetchType.EAGER)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private Set<ApplicationCategory> applicationCategories = new HashSet<>();
+    private java.util.List<Category> categories = new java.util.ArrayList<>();
 
     @Column(nullable = true)
     private String iconLarge;

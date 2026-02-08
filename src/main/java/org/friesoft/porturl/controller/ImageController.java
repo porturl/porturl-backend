@@ -1,23 +1,22 @@
 package org.friesoft.porturl.controller;
 
+import org.friesoft.porturl.api.ImageApi;
 import org.friesoft.porturl.service.FileStorageService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 @RestController
-@RequestMapping("/api/images")
-public class ImageController {
+public class ImageController implements ImageApi {
 
     private final FileStorageService fileStorageService;
 
@@ -25,40 +24,24 @@ public class ImageController {
         this.fileStorageService = fileStorageService;
     }
 
-    /**
-     * Endpoint for uploading a new image. The client is responsible for resizing.
-     * 
-     * @param file The image file from the multipart request.
-     * @return A JSON object containing the unique identifier for the uploaded
-     *         image.
-     */
-    @PostMapping
-    public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file) {
+    @Override
+    public ResponseEntity<org.friesoft.porturl.dto.ImageUploadResponse> uploadImage(MultipartFile file) {
         String filename = fileStorageService.store(file);
-        // The key is now just 'filename' for clarity
-        return ResponseEntity.ok().body(Map.of("filename", filename));
+        org.friesoft.porturl.dto.ImageUploadResponse response = new org.friesoft.porturl.dto.ImageUploadResponse();
+        response.setFilename(filename);
+        return ResponseEntity.ok(response);
     }
 
-    /**
-     * Endpoint for serving an image by its unique filename.
-     * 
-     * @param filename The unique identifier of the image.
-     * @return The image file as a resource.
-     */
-    @GetMapping("/{filename:.+}")
-    @ResponseBody
-    public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
+    @Override
+    public ResponseEntity<org.springframework.core.io.Resource> serveImage(String filename) {
         Path filePath = fileStorageService.load(filename);
         try {
-            @SuppressWarnings("null")
             Resource resource = new UrlResource(filePath.toUri());
             if (resource.exists() || resource.isReadable()) {
                 String contentType = null;
                 try {
                     contentType = Files.probeContentType(filePath);
-                } catch (IOException e) {
-                    // Fallback to default
-                }
+                } catch (IOException _) { }
 
                 if (contentType == null) {
                     contentType = "application/octet-stream";
@@ -69,7 +52,6 @@ public class ImageController {
                         .contentType(MediaType.parseMediaType(contentType))
                         .body(resource);
             } else {
-                // Return a 404 Not Found if the file doesn't exist
                 return ResponseEntity.notFound().build();
             }
         } catch (MalformedURLException e) {

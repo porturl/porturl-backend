@@ -1,121 +1,129 @@
 package org.friesoft.porturl.controller;
 
+import org.friesoft.porturl.api.CategoryApi;
 import org.friesoft.porturl.entities.Category;
 import org.friesoft.porturl.repositories.CategoryRepository;
 import org.friesoft.porturl.service.CategoryService;
+import org.friesoft.porturl.service.ApplicationService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.jspecify.annotations.NonNull;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.net.URI;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @RestController
-@RequestMapping("/api/categories")
-public class CategoryController {
+public class CategoryController implements CategoryApi {
 
     private final CategoryRepository repository;
     private final CategoryService categoryService;
+    private final ApplicationService applicationService;
 
-    public CategoryController(CategoryRepository repository, CategoryService categoryService) {
+    public CategoryController(CategoryRepository repository, CategoryService categoryService, ApplicationService applicationService) {
         this.repository = repository;
         this.categoryService = categoryService;
+        this.applicationService = applicationService;
     }
 
-    /**
-     * Finds and returns all categories that are visible to the current user.
-     * A category is visible if it is enabled and contains at least one application
-     * that the user has permission to see.
-     */
-    @GetMapping
-    public Iterable<Category> findAll() {
-        return this.categoryService.getVisibleCategories();
+    @Override
+    public ResponseEntity<List<org.friesoft.porturl.dto.Category>> findAllCategories() {
+        List<org.friesoft.porturl.dto.Category> dtos = StreamSupport.stream(this.categoryService.getVisibleCategories().spliterator(), false)
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Category> findById(@PathVariable @NonNull Long id) {
+    @Override
+    public ResponseEntity<org.friesoft.porturl.dto.Category> findCategoryById(Long id) {
         return repository.findById(id)
+                .map(this::mapToDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Creates a new category.
-     *
-     * @param category The category object from the request body.
-     * @return A 201 Created response with the location of the new resource,
-     *         or a 409 Conflict if the name already exists.
-     */
-    @PostMapping
-    public ResponseEntity<?> addCategory(@RequestBody Category category) {
+    @Override
+    public ResponseEntity<org.friesoft.porturl.dto.Category> addCategory(@RequestBody org.friesoft.porturl.dto.Category categoryDto) {
         try {
-            category.setId(null);
+            Category category = new Category();
+            category.setName(categoryDto.getName());
+            category.setSortOrder(categoryDto.getSortOrder());
+            if (categoryDto.getApplicationSortMode() != null) {
+                category.setApplicationSortMode(Category.SortMode.valueOf(categoryDto.getApplicationSortMode().getValue()));
+            }
+            category.setIcon(categoryDto.getIcon());
+            category.setDescription(categoryDto.getDescription());
+            category.setEnabled(categoryDto.getEnabled() != null ? categoryDto.getEnabled() : true);
+            
             Category savedCategory = this.repository.save(category);
-
-            URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                    .path("/{id}")
-                    .buildAndExpand(savedCategory.getId())
-                    .toUri();
-
-            return ResponseEntity.created(location).body(savedCategory);
+            return ResponseEntity.status(201).body(mapToDto(savedCategory));
         } catch (DataIntegrityViolationException e) {
-            return ResponseEntity
-                    .status(HttpStatus.CONFLICT)
-                    .body("A category with this name already exists.");
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
     }
 
-    /**
-     * Updates an existing category's properties.
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<Category> updateCategory(@PathVariable @NonNull Long id,
-            @RequestBody Category updatedCategory) {
+    @Override
+    public ResponseEntity<org.friesoft.porturl.dto.Category> updateCategory(Long id, @RequestBody org.friesoft.porturl.dto.Category updatedCategoryDto) {
         return repository.findById(id)
                 .map(category -> {
-                    category.setName(updatedCategory.getName());
-                    category.setSortOrder(updatedCategory.getSortOrder());
-                    category.setApplicationSortMode(updatedCategory.getApplicationSortMode());
-                    category.setIcon(updatedCategory.getIcon());
-                    category.setDescription(updatedCategory.getDescription());
-                    category.setEnabled(updatedCategory.isEnabled());
-                    return ResponseEntity.ok(repository.save(category));
+                    category.setName(updatedCategoryDto.getName());
+                    category.setSortOrder(updatedCategoryDto.getSortOrder());
+                    if (updatedCategoryDto.getApplicationSortMode() != null) {
+                        category.setApplicationSortMode(Category.SortMode.valueOf(updatedCategoryDto.getApplicationSortMode().getValue()));
+                    }
+                    category.setIcon(updatedCategoryDto.getIcon());
+                    category.setDescription(updatedCategoryDto.getDescription());
+                    category.setEnabled(updatedCategoryDto.getEnabled() != null ? updatedCategoryDto.getEnabled() : true);
+                    return ResponseEntity.ok(mapToDto(repository.save(category)));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Handles batch updates for reordering categories.
-     */
-    @PostMapping("/reorder")
+    @Override
     @Transactional
-    public ResponseEntity<Void> reorderCategories(@RequestBody List<Category> categories) {
-        var categoryMap = repository.findAllById(categories.stream().map(Category::getId).toList());
+    public ResponseEntity<Void> reorderCategories(@RequestBody List<org.friesoft.porturl.dto.Category> categories) {
+        var categoryMap = repository.findAllById(categories.stream().map(org.friesoft.porturl.dto.Category::getId).toList());
         var mappedCategories = new java.util.HashMap<Long, Category>();
         categoryMap.forEach(c -> mappedCategories.put(c.getId(), c));
 
-        for (Category cat : categories) {
-            mappedCategories.get(cat.getId()).setSortOrder(cat.getSortOrder());
+        for (org.friesoft.porturl.dto.Category cat : categories) {
+            if (mappedCategories.containsKey(cat.getId())) {
+                mappedCategories.get(cat.getId()).setSortOrder(cat.getSortOrder());
+            }
         }
 
         repository.saveAll(mappedCategories.values());
-
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * Deletes a category by its ID.
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable @NonNull Long id) {
+    @Override
+    public ResponseEntity<Void> deleteCategory(Long id) {
         if (repository.existsById(id)) {
             repository.deleteById(id);
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    private org.friesoft.porturl.dto.Category mapToDto(Category category) {
+        org.friesoft.porturl.dto.Category dto = new org.friesoft.porturl.dto.Category();
+        dto.setId(category.getId());
+        dto.setName(category.getName());
+        dto.setIcon(category.getIcon());
+        dto.setEnabled(category.isEnabled());
+        dto.setSortOrder(category.getSortOrder());
+        dto.setApplicationSortMode(org.friesoft.porturl.dto.Category.ApplicationSortModeEnum.fromValue(category.getApplicationSortMode().name()));
+        dto.setDescription(category.getDescription());
+        
+        if (category.getApplications() != null) {
+            dto.setApplications(category.getApplications().stream()
+                .map(applicationService::mapToDto)
+                .collect(Collectors.toList()));
+        }
+        
+        return dto;
     }
 }
