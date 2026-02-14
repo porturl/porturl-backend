@@ -82,8 +82,9 @@ repositories {
 dependencies {
     implementation(platform(libs.spring.cloud.bom))
     implementation(libs.bundles.spring.starters)
+    implementation(libs.spring.boot.starter.opentelemetry)
     implementation(libs.spring.cloud.gateway.server.webmvc)
-    implementation(libs.micrometer.tracing.bridge.brave)
+    implementation(libs.micrometer.tracing.bridge.otel)
     compileOnly(libs.lombok)
 
     implementation(libs.springdoc.openapi.starter.webmvc.api)
@@ -92,6 +93,7 @@ dependencies {
     // logging bundle
     implementation(libs.bundles.logging)
     implementation(libs.opentelemetry.exporter.otlp)
+    implementation(libs.opentelemetry.logback.appender)
 
     implementation(libs.keycloak.admin.client)
     implementation(libs.jakarta.validation)
