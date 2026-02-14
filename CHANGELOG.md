@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.0](https://github.com/porturl/porturl-backend/compare/v0.10.0...v0.11.0) (2026-02-14)
+
+
+### Features
+
+* add support for opentelemetry tracing (untested) ([6954b64](https://github.com/porturl/porturl-backend/commit/6954b6411e7c6982cb2ef8a9054a02d3492f708f))
+
+
+### Bug Fixes
+
+* opentelemetry collection of logs, metrics and traces now actually works ([752d397](https://github.com/porturl/porturl-backend/commit/752d3972eb02137fea5d5bbf25edd723fa240ad1))
+* workaround for github.com/googleapis/release-please/issues/1650 ([7a47d65](https://github.com/porturl/porturl-backend/commit/7a47d65a066cf822b1601fed05e9887e39890fa7))
+
 ## [0.10.0](https://github.com/porturl/porturl-backend/compare/v0.9.2...v0.10.0) (2026-01-18)
 
 
