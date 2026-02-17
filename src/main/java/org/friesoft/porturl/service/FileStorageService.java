@@ -59,6 +59,23 @@ public class FileStorageService {
     }
 
     /**
+     * Stores bytes as a file with a given filename.
+     *
+     * @param bytes The image bytes.
+     * @param filename The desired filename.
+     * @return The filename.
+     */
+    public String storeBytes(byte[] bytes, String filename) {
+        try {
+            Path destinationFile = this.rootLocation.resolve(filename);
+            Files.write(destinationFile, bytes);
+            return filename;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store bytes.", e);
+        }
+    }
+
+    /**
      * Loads a file by its unique filename.
      * 
      * @param filename The unique identifier of the image.

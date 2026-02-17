@@ -89,6 +89,7 @@ dependencies {
 
     implementation(libs.springdoc.openapi.starter.webmvc.api)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
+    implementation(libs.jackson.dataformat.yaml)
 
     // logging bundle
     implementation(libs.bundles.logging)

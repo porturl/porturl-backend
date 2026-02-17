@@ -63,6 +63,7 @@ logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback"
 logback-contrib-json-classic = { module = "ch.qos.logback.contrib:logback-json-classic", version.ref = "logbackContrib" }
 logback-contrib-jackson = { module = "ch.qos.logback.contrib:logback-jackson", version.ref = "logbackContrib" }
 jackson-databind = { module = "tools.jackson.core:jackson-databind" }
+jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml" }
 logstash-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstashEncoder" }
 
 # Other

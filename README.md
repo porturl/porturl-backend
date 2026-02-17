@@ -95,6 +95,29 @@ The following endpoints are available for managing users and applications. They 
     -   **Description:** Revokes a user's specific role for an application.
     -   **Example:** `.../unassign/123/456/admin` - Removes the `ROLE_MY_NEW_APP_ADMIN` composite role from the user.
 
+### Export & Import (Backup & Migration)
+
+These endpoints allow for complete backup, restoration, or migration of the system configuration. They also require `ROLE_ADMIN`.
+
+-   **`GET /api/admin/export`**
+    -   **Description:** Exports all categories and applications to a YAML string.
+    -   **Features:**
+        -   Includes all application metadata and category associations.
+        -   Includes all defined roles for each application.
+        -   **Embeds images:** All application icons are converted to Base64 and included in the YAML file.
+    -   **Use Case:** Backups, migration to a new instance, or configuration management (e.g., using Ansible).
+
+-   **`POST /api/admin/import`**
+    -   **Description:** Restores the entire system state from a YAML string.
+    -   **⚠️ CRITICAL WARNING:** This operation **purges all existing applications and categories** in the local database before importing.
+    -   **Process:**
+        -   Clears local tables (Applications, Categories, and their links).
+        -   Does **NOT** purge Keycloak data.
+        -   Re-creates all categories and applications from the YAML.
+        -   Restores images to the local file storage.
+        -   Re-creates all necessary Keycloak roles (using "create if not exists" logic).
+    -   **Body:** A YAML string (as exported from the `/export` endpoint).
+
 ## 4. Monitoring & Observability (Grafana Cloud)
 
 The backend is instrumented with OpenTelemetry (OTLP) to send metrics and traces to Grafana Cloud.

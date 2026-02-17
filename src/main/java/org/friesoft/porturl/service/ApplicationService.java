@@ -160,7 +160,8 @@ public class ApplicationService {
         }
     }
 
-    private void createApplicationRoles(Application app, List<String> roleNames) {
+    @Transactional
+    public void createApplicationRoles(Application app, List<String> roleNames) {
         if (roleNames == null || roleNames.isEmpty()) return;
         RolesResource rolesResource = keycloakAdminClient.realm(realm).roles();
         String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
@@ -178,7 +179,8 @@ public class ApplicationService {
         }
     }
 
-    private void deleteApplicationRoles(Application app, List<String> roleNames) {
+    @Transactional
+    public void deleteApplicationRoles(Application app, List<String> roleNames) {
         if (roleNames == null || roleNames.isEmpty()) return;
         RolesResource rolesResource = keycloakAdminClient.realm(realm).roles();
         String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
@@ -314,15 +316,30 @@ public class ApplicationService {
         }
     }
 
-    public List<String> getRolesForApplication(Long applicationId) {
-        Application app = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
-        List<RoleRepresentation> allRealmRoles = keycloakAdminClient.realm(realm).roles().list();
-        String appPrefix = "ROLE_" + app.getName().toUpperCase().replaceAll("\s+", "_") + "_";
-        return allRealmRoles.stream()
-                .map(RoleRepresentation::getName)
-                .filter(name -> name.startsWith(appPrefix))
-                .map(name -> name.substring(appPrefix.length()).toLowerCase())
-                .collect(Collectors.toList());
+        public List<String> getRolesForApplication(Long applicationId) {
+            Application app = applicationRepository.findById(applicationId)
+                    .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+            List<RoleRepresentation> allRealmRoles = getAllRealmRoles();
+            String appPrefix = "ROLE_" + app.getName().toUpperCase().replaceAll("\\s+", "_") + "_";
+            return allRealmRoles.stream()
+                    .map(RoleRepresentation::getName)
+                    .filter(name -> name.startsWith(appPrefix))
+                    .map(name -> name.substring(appPrefix.length()).toLowerCase())
+                    .collect(Collectors.toList());
+        }
+
+        public List<RoleRepresentation> getAllRealmRoles() {
+        List<RoleRepresentation> allRoles = new ArrayList<>();
+        int first = 0;
+        int max = 100;
+        List<RoleRepresentation> page;
+        do {
+            page = keycloakAdminClient.realm(realm).roles().list(first, max);
+            allRoles.addAll(page);
+            first += max;
+        } while (page.size() == max);
+        return allRoles;
     }
 }
+
+    
