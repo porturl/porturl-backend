@@ -108,17 +108,53 @@ These endpoints allow for complete backup, restoration, or migration of the syst
     -   **Use Case:** Backups, migration to a new instance, or configuration management (e.g., using Ansible).
 
 -   **`POST /api/admin/import`**
-    -   **Description:** Restores the entire system state from a YAML string.
-    -   **⚠️ CRITICAL WARNING:** This operation **purges all existing applications and categories** in the local database before importing.
+    -   **Description:** Synchronizes the system state from a YAML string.
     -   **Process:**
-        -   Clears local tables (Applications, Categories, and their links).
-        -   Does **NOT** purge Keycloak data.
-        -   Re-creates all categories and applications from the YAML.
-        -   Restores images to the local file storage.
-        -   Re-creates all necessary Keycloak roles (using "create if not exists" logic).
-    -   **Body:** A YAML string (as exported from the `/export` endpoint).
+        -   Performs a **differential sync** (Smart Sync).
+        -   Matches existing categories and applications by name.
+        -   Updates changed fields and creates missing entities.
+        -   Removes entities that are present in the database but missing from the YAML.
+        -   Restores images and re-creates Keycloak roles as needed.
+    -   **Body:** A YAML object (as exported from the `/export` endpoint).
 
-## 4. Monitoring & Observability (Grafana Cloud)
+---
+
+## 4. Storage Modes
+
+PortUrl supports two distinct storage strategies to accommodate different deployment environments.
+
+### Mode A: Persistent SQL (Default)
+In this mode, the application uses a persistent database (SQLite by default) to store all state. This is ideal for manual management via the UI.
+
+-   **Primary Source:** `data/porturl.mv.db`
+-   **Configuration:**
+    ```yaml
+    porturl:
+      storage:
+        type: SQL
+    ```
+
+### Mode B: Transparent YAML (GitOps / Infrastructure-as-Code)
+Designed for Kubernetes (ConfigMaps) or Puppet/Ansible managed environments. The application treats a YAML file as the authoritative source of truth and uses an **in-memory database** for high-performance queries.
+
+-   **Primary Source:** A YAML file (e.g., `config.yaml`).
+-   **Key Features:**
+    -   **Startup Sync:** Loads the YAML file into the in-memory DB when the app starts.
+    -   **Hot Reload:** Uses a file watcher to detect external changes to the YAML (e.g., when Puppet updates a file or a ConfigMap is re-mounted) and automatically syncs the DB.
+    -   **Write-Through:** Changes made in the UI are automatically written back to the YAML file.
+    -   **Stateless:** No persistent database file is required; only the YAML file needs to be preserved.
+
+-   **Configuration:**
+    ```yaml
+    porturl:
+      storage:
+        type: YAML
+        yaml-path: "/etc/porturl/config.yaml"
+    ```
+
+---
+
+## 5. Monitoring & Observability (Grafana Cloud)
 
 The backend is instrumented with OpenTelemetry (OTLP) to send metrics and traces to Grafana Cloud.
 

@@ -34,6 +34,13 @@ public class PorturlProperties {
     @Data
     public static class Storage {
         private String location;
+        private StorageType type = StorageType.SQL;
+        private String yamlPath = "config.yaml";
+    }
+
+    public enum StorageType {
+        SQL,
+        YAML
     }
 
     @Data

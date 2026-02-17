@@ -35,6 +35,8 @@ spring-boot-devtools = { module = "org.springframework.boot:spring-boot-devtools
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
 spring-boot-starter-tomcat = { module = "org.springframework.boot:spring-boot-starter-tomcat"}
 spring-boot-starter-opentelemetry = { module = "org.springframework.boot:spring-boot-starter-opentelemetry" }
+spring-boot-starter-aspectj = { module = "org.springframework.boot:spring-boot-starter-aspectj" }
+spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
 
 springdoc-openapi-starter-webmvc-api = { module = "org.springdoc:springdoc-openapi-starter-webmvc-api", version.ref = "springdocOpenApi" }
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref="springdocOpenApi" }
@@ -47,7 +49,6 @@ spring-security-test = { module = "org.springframework.security:spring-security-
 # Micrometer & Tracing
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
 micrometer-registry-otlp = { module = "io.micrometer:micrometer-registry-otlp" }
-micrometer-tracing-bridge-brave = { module = "io.micrometer:micrometer-tracing-bridge-brave" }
 micrometer-tracing-bridge-otel = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
 opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
 opentelemetry-logback-appender = { module = "io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0", version.ref = "otelLogbackAppender" }
@@ -91,7 +92,9 @@ spring-starters = [
     "spring-boot-starter-security",
     "spring-boot-starter-security-oauth2-resource-server",
     "spring-boot-starter-tomcat",
-    "spring-boot-starter-flyway"
+    "spring-boot-starter-flyway",
+    "spring-boot-starter-aspectj",
+    "spring-boot-starter-jdbc"
 ]
 logging = [
     "logback-access-common",

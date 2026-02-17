@@ -82,6 +82,8 @@ repositories {
 dependencies {
     implementation(platform(libs.spring.cloud.bom))
     implementation(libs.bundles.spring.starters)
+    implementation(libs.spring.boot.starter.aspectj)
+    implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.spring.boot.starter.opentelemetry)
     implementation(libs.spring.cloud.gateway.server.webmvc)
     implementation(libs.micrometer.tracing.bridge.otel)

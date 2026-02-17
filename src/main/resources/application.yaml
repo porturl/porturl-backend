@@ -12,6 +12,8 @@ porturl:
     health-check-interval: 30s
   storage:
     location: data/uploads
+    type: ${PORTURL_STORAGE_TYPE:SQL}
+    yaml-path: ${PORTURL_YAML_PATH:data/config.yaml}
   cleanup:
     # Set to true to enable the daily cleanup of orphaned images
     enabled: false

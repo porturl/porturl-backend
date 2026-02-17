@@ -19,7 +19,7 @@ public class Application {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 
     @Column(nullable = false)
@@ -40,7 +40,7 @@ public class Application {
     private String iconThumbnail;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_user_id")
+    @JoinColumn(name = "created_by_user_id", nullable = true)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private User createdBy;

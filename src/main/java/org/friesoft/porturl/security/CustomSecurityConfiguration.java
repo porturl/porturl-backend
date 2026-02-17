@@ -91,7 +91,11 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
         requestFactory.setReadTimeout(30000);
         RestTemplate restTemplate = new RestTemplate(requestFactory);
 
-        return NimbusJwtDecoder.withIssuerLocation(issuerUri)
+        // Using withJwkSetUri prevents the immediate OIDC configuration fetch on startup
+        // which often causes crashes in GitOps/K8s environments if Keycloak is not yet ready.
+        String jwkSetUri = issuerUri + (issuerUri.endsWith("/") ? "" : "/") + "protocol/openid-connect/certs";
+        
+        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
                 .restOperations(restTemplate)
                 .build();
     }
