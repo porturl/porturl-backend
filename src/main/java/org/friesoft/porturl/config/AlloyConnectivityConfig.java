@@ -23,6 +23,7 @@ import java.util.Collection;
 public class AlloyConnectivityConfig {
 
     @Component
+    @ConditionalOnProperty(name = "porturl.otel.enabled", havingValue = "true")
     public static class AlloyExporterWrapperPostProcessor implements BeanPostProcessor {
 
         private final AlloyHealthService healthService;
