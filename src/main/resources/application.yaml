@@ -7,6 +7,7 @@ porturl:
       - http://localhost:4200
       - http://127.0.0.1:4200
   otel:
+    enabled: ${PORTURL_OTEL_ENABLED:false}
     alloy-url: ${PORTURL_OTEL_ALLOY_URL:http://localhost:4318}
     health-check-interval: 30s
   storage:

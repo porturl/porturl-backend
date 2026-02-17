@@ -11,6 +11,7 @@ import io.opentelemetry.sdk.trace.export.SpanExporter;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import org.friesoft.porturl.service.AlloyHealthService;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collection;
 
 @Configuration(proxyBeanMethods = false)
+@ConditionalOnProperty(name = "porturl.otel.enabled", havingValue = "true")
 public class AlloyConnectivityConfig {
 
     @Component

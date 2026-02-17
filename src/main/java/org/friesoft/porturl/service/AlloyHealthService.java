@@ -3,6 +3,7 @@ package org.friesoft.porturl.service;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import java.net.URL;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "porturl.otel.enabled", havingValue = "true")
 public class AlloyHealthService {
 
     @Value("${management.otlp.metrics.export.url:http://localhost:4318/v1/metrics}")
