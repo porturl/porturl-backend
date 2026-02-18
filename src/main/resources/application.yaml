@@ -33,22 +33,32 @@ management:
   otlp:
     metrics:
       export:
+        enabled: ${porturl.otel.enabled}
         url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
         step: 1m
-  opentelemetry:
+    tracing:
+      export:
+        enabled: ${porturl.otel.enabled}
     logging:
       export:
+        enabled: ${porturl.otel.enabled}
+  opentelemetry:
+    enabled: ${porturl.otel.enabled}
+    logging:
+      export:
+        enabled: ${porturl.otel.enabled}
         otlp:
           endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:http://localhost:4318/v1/logs}
     tracing:
       export:
+        enabled: ${porturl.otel.enabled}
         otlp:
           endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
     resource:
       attributes:
         service.name: porturl-backend
   tracing:
-    enabled: ${MANAGEMENT_TRACING_ENABLED:true}
+    enabled: ${porturl.otel.enabled}
     sampling:
       probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
     propagation:

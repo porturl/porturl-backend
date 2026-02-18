@@ -1,5 +1,6 @@
 package org.friesoft.porturl.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.function.RouterFunction;
@@ -14,6 +15,7 @@ import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFuncti
 import static org.springframework.web.servlet.function.RequestPredicates.path;
 
 @Configuration
+@ConditionalOnProperty(name = "porturl.otel.enabled", havingValue = "true")
 public class GatewayConfig {
 
     private final PorturlProperties portUrlProperties;

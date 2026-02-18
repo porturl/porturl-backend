@@ -26,9 +26,7 @@ public class TelemetryInfoContributor implements InfoContributor {
         boolean healthy = healthService.map(AlloyHealthService::isUp).orElse(false);
         
         telemetryDetails.put("enabled", enabled);
-        if (enabled) {
-            telemetryDetails.put("healthy", healthy);
-        }
+        telemetryDetails.put("healthy", healthy);
         
         builder.withDetail("telemetry", telemetryDetails);
     }
