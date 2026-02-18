@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -26,11 +27,16 @@ public class CustomGrantedAuthoritiesExtractor {
         this.jsonMapper = jsonMapper;
     }
 
-    public Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
+    @Transactional
+    public synchronized Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
         String providerUserId = jwt.getSubject();
         String email = jwt.getClaimAsString("email");
 
         userRepository.findByProviderUserId(providerUserId)
+            .or(() -> userRepository.findByEmail(email).map(user -> {
+                user.setProviderUserId(providerUserId);
+                return userRepository.save(user);
+            }))
             .orElseGet(() -> {
                 User newUser = new User();
                 newUser.setProviderUserId(providerUserId);

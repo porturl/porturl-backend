@@ -43,3 +43,5 @@ out/
 .env*
 !.env.alloy.sample
 !testdata/env.template
+
+local.properties
