@@ -32,9 +32,9 @@ fi
 # --- Helper Functions ---
 
 # Base64 encoded placeholder images
-IMG_LARGE_B64="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
-IMG_MEDIUM_B64="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9mQAAAABJRU5ErkJggg=="
-IMG_THUMBNAIL_B64="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkaPj/DwAC/AG6I/SHLwAAAABJRU5ErkJggg=="
+IMG_B64="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkaPj/DwAC/AG6I/SHLwAAAABJRU5ErkJggg=="
+IMG_LARGE_B64="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkaPj/DwAC/AG6I/SHLwAAAABJRU5ErkJggg=="
+IMG_MEDIUM_B64="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkaPj/DwAC/AG6I/SHLwAAAABJRU5ErkJggg=="
 
 # Function to upload an image and return its unique filename
 upload_icon() {
@@ -59,7 +59,7 @@ upload_icon() {
 create_category() {
   local NAME=$1
   local SORT_ORDER=$2
-  local ICON=$3
+  local DESCRIPTION=$3
   local APP_SORT_MODE=$4
 
   # Search the pre-fetched list of categories for a match by name
@@ -73,7 +73,7 @@ create_category() {
     local CREATE_RESPONSE=$(curl -s -X POST "$API_BASE_URL/categories" \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $ACCESS_TOKEN" \
-      -d "{\"name\": \"$NAME\", \"sortOrder\": $SORT_ORDER, \"icon\": \"$ICON\", \"applicationSortMode\": \"$APP_SORT_MODE\"}")
+      -d "{\"name\": \"$NAME\", \"sortOrder\": $SORT_ORDER, \"description\": \"$DESCRIPTION\", \"applicationSortMode\": \"$APP_SORT_MODE\"}")
 
     local CATEGORY_ID=$(echo "$CREATE_RESPONSE" | jq -r .id)
     if [ "$CATEGORY_ID" == "null" ] || [ -z "$CATEGORY_ID" ]; then
@@ -93,11 +93,9 @@ create_category() {
 create_app() {
   local NAME=$1
   local URL=$2
-  local SORT_ORDER=$3
-  local ICON_LARGE=$4
-  local ICON_MEDIUM=$5
-  local ICON_THUMBNAIL=$6
-  shift 6
+  local ICON=$3
+  local ROLES_CSV=$4
+  shift 4
   local CATEGORY_IDS=("$@")
 
   local CATEGORIES_JSON="["
@@ -109,10 +107,21 @@ create_app() {
   done
   CATEGORIES_JSON+="]"
 
-  local JSON_PAYLOAD="{\"name\": \"$NAME\", \"url\": \"$URL\", \"sortOrder\": $SORT_ORDER, \"categories\": $CATEGORIES_JSON"
-  if [[ -n "$ICON_LARGE" ]]; then JSON_PAYLOAD+=", \"iconLarge\": \"$ICON_LARGE\""; fi
-  if [[ -n "$ICON_MEDIUM" ]]; then JSON_PAYLOAD+=", \"iconMedium\": \"$ICON_MEDIUM\""; fi
-  if [[ -n "$ICON_THUMBNAIL" ]]; then JSON_PAYLOAD+=", \"iconThumbnail\": \"$ICON_THUMBNAIL\""; fi
+  local ROLES_JSON="[]"
+  if [[ -n "$ROLES_CSV" ]]; then
+    ROLES_JSON="["
+    FIRST=true
+    IFS=',' read -ra ADDR <<< "$ROLES_CSV"
+    for ROLE in "${ADDR[@]}"; do
+      if [ "$FIRST" = false ]; then ROLES_JSON+=","; fi
+      ROLES_JSON+="\"$ROLE\""
+      FIRST=false
+    done
+    ROLES_JSON+="]"
+  fi
+
+  local JSON_PAYLOAD="{\"name\": \"$NAME\", \"url\": \"$URL\", \"categories\": $CATEGORIES_JSON, \"roles\": $ROLES_JSON"
+  if [[ -n "$ICON" ]]; then JSON_PAYLOAD+=", \"icon\": \"$ICON\""; fi
   JSON_PAYLOAD+="}"
 
   echo "Creating application: $NAME..." >&2
@@ -147,30 +156,28 @@ echo
 echo "Creating and uploading placeholder images..." >&2
 echo "$IMG_LARGE_B64" | base64 -d > placeholder_large.png
 echo "$IMG_MEDIUM_B64" | base64 -d > placeholder_medium.png
-echo "$IMG_THUMBNAIL_B64" | base64 -d > placeholder_thumbnail.png
+echo "$IMG_B64" | base64 -d > placeholder_thumbnail.png
 
-ICON1_LARGE=$(upload_icon "placeholder_large.png")
-ICON1_MEDIUM=$(upload_icon "placeholder_medium.png")
-ICON1_THUMBNAIL=$(upload_icon "placeholder_thumbnail.png")
-ICON2_THUMBNAIL=$(upload_icon "placeholder_thumbnail.png")
+ICON1=$(upload_icon "placeholder_thumbnail.png")
+ICON2=$(upload_icon "placeholder_thumbnail.png")
 echo
 
 # --- Create Categories (will now skip if they exist) ---
 echo "Creating categories..." >&2
-CAT_HARDWARE_ID=$(create_category "Hardware" 0 "fas fa-server" "CUSTOM")
-CAT_MEDIA_ID=$(create_category "Media" 1 "fas fa-film" "ALPHABETICAL")
-CAT_HOME_ID=$(create_category "Home Automation" 2 "fas fa-home" "CUSTOM")
-CAT_MONITORING_ID=$(create_category "Monitoring" 3 "fas fa-chart-line" "ALPHABETICAL")
+CAT_HARDWARE_ID=$(create_category "Hardware" 0 "Physical server hardware" "CUSTOM")
+CAT_MEDIA_ID=$(create_category "Media" 1 "Media streaming and management" "ALPHABETICAL")
+CAT_HOME_ID=$(create_category "Home Automation" 2 "Smart home devices and dashboards" "CUSTOM")
+CAT_MONITORING_ID=$(create_category "Monitoring" 3 "System and network monitoring" "ALPHABETICAL")
 echo "Categories are set up."
 echo
 
 # --- Create Applications ---
 echo "Creating sample applications..." >&2
-create_app "Plex" "https://plex.tv" 0 "$ICON1_LARGE" "$ICON1_MEDIUM" "$ICON1_THUMBNAIL" "$CAT_MEDIA_ID"
-create_app "Synology NAS" "http://192.168.1.10:5000" 0 "" "" "$ICON2_THUMBNAIL" "$CAT_HARDWARE_ID"
-create_app "Grafana" "http://192.168.1.21:3000" 1 "" "" "$ICON2_THUMBNAIL" "$CAT_HOME_ID" "$CAT_MONITORING_ID"
-create_app "Home Assistant" "http://192.168.1.20:8123" 0 "" "" "$ICON2_THUMBNAIL" "$CAT_HOME_ID"
-create_app "GitHub" "https://github.com" 0 "" "" ""
+create_app "Plex" "https://plex.tv" "$ICON1" "admin,user" "$CAT_MEDIA_ID"
+create_app "Synology NAS" "http://192.168.1.10:5000" "$ICON2" "admin" "$CAT_HARDWARE_ID"
+create_app "Grafana" "http://192.168.1.21:3000" "$ICON2" "viewer,editor,admin" "$CAT_HOME_ID" "$CAT_MONITORING_ID"
+create_app "Home Assistant" "http://192.168.1.20:8123" "$ICON2" "admin,user" "$CAT_HOME_ID"
+create_app "GitHub" "https://github.com" "" ""
 echo "All applications created!"
 echo
 
