@@ -4,8 +4,11 @@ import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.entities.Category;
 import org.friesoft.porturl.repositories.CategoryRepository;
 import org.friesoft.porturl.repositories.ApplicationRepository;
+import org.friesoft.porturl.util.NaturalOrderComparator;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -24,6 +27,7 @@ public class CategoryService {
         this.applicationRepository = applicationRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<Category> getVisibleCategories() {
         // 1. Get the applications the current user is allowed to see.
         List<org.friesoft.porturl.dto.ApplicationWithRolesDto> visibleAppDtos = applicationService.getApplicationsForCurrentUser();
@@ -32,16 +36,27 @@ public class CategoryService {
                 .collect(Collectors.toSet());
 
         // 2. Fetch all enabled categories. 
-        // Note: For an admin, you might want to return ALL categories, but usually 'enabled' is a display flag.
         List<Category> categories = categoryRepository.findByEnabledTrueOrderBySortOrderAsc();
 
-        // 3. Filter the applications list within EACH category to only include those the user can see.
+        // 3. Filter and sort the applications list within EACH category
         for (Category cat : categories) {
             if (cat.getApplications() != null) {
-                cat.setApplications(cat.getApplications().stream()
+                List<Application> filteredApps = cat.getApplications().stream()
                     .filter(Objects::nonNull)
                     .filter(app -> visibleAppIds.contains(app.getId()))
-                    .collect(Collectors.toList()));
+                    .collect(Collectors.toCollection(ArrayList::new));
+                
+                // Always enforce sort order based on mode during retrieval
+                if (cat.getApplicationSortMode() == Category.SortMode.ALPHABETICAL) {
+                    NaturalOrderComparator comparator = new NaturalOrderComparator();
+                    filteredApps.sort((a, b) -> {
+                        String nameA = a.getName() != null ? a.getName() : "";
+                        String nameB = b.getName() != null ? b.getName() : "";
+                        return comparator.compare(nameA, nameB);
+                    });
+                }
+                
+                cat.setApplications(filteredApps);
             }
         }
 

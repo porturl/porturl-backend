@@ -73,6 +73,7 @@ public class CategoryController implements CategoryApi {
                     category.setSortOrder(updatedCategoryDto.getSortOrder());
                     if (updatedCategoryDto.getApplicationSortMode() != null) {
                         category.setApplicationSortMode(Category.SortMode.valueOf(updatedCategoryDto.getApplicationSortMode().getValue()));
+                        applicationService.enforceApplicationSortOrder(category);
                     }
                     category.setIcon(updatedCategoryDto.getIcon());
                     category.setDescription(updatedCategoryDto.getDescription());
@@ -91,7 +92,11 @@ public class CategoryController implements CategoryApi {
 
         for (org.friesoft.porturl.dto.Category cat : categories) {
             if (mappedCategories.containsKey(cat.getId())) {
-                mappedCategories.get(cat.getId()).setSortOrder(cat.getSortOrder());
+                Category category = mappedCategories.get(cat.getId());
+                category.setSortOrder(cat.getSortOrder());
+                if (cat.getApplicationSortMode() != null) {
+                    category.setApplicationSortMode(Category.SortMode.valueOf(cat.getApplicationSortMode().getValue()));
+                }
             }
         }
 

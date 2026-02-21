@@ -9,6 +9,7 @@ import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.repositories.ApplicationRepository;
 import org.friesoft.porturl.repositories.CategoryRepository;
 import org.friesoft.porturl.repositories.UserRepository;
+import org.friesoft.porturl.util.NaturalOrderComparator;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RolesResource;
 import org.keycloak.representations.idm.RoleRepresentation;
@@ -65,6 +66,7 @@ public class ApplicationService {
                         .orElseThrow(() -> new RuntimeException("Category not found with id: " + catDto.getId()));
                 managedCategory.getApplications().add(newApp);
                 newApp.getCategories().add(managedCategory);
+                enforceApplicationSortOrder(managedCategory);
             }
         }
 
@@ -133,6 +135,7 @@ public class ApplicationService {
                                         .orElseThrow(() -> new RuntimeException("Category not found"));
                                 managedCategory.getApplications().add(application);
                                 application.getCategories().add(managedCategory);
+                                enforceApplicationSortOrder(managedCategory);
                             }
                         });
                     }
@@ -148,14 +151,22 @@ public class ApplicationService {
     public void reorderApplications(List<org.friesoft.porturl.dto.Category> categories) {
         for (org.friesoft.porturl.dto.Category catDto : categories) {
             categoryRepository.findById(catDto.getId()).ifPresent(category -> {
-                if (catDto.getApplications() != null) {
-                    List<Application> reorderedApps = new ArrayList<>();
-                    for (org.friesoft.porturl.dto.Application appDto : catDto.getApplications()) {
-                        applicationRepository.findById(appDto.getId()).ifPresent(reorderedApps::add);
-                    }
-                    category.setApplications(reorderedApps);
-                    categoryRepository.save(category);
+                if (catDto.getApplicationSortMode() != null) {
+                    category.setApplicationSortMode(Category.SortMode.valueOf(catDto.getApplicationSortMode().getValue()));
                 }
+                
+                if (catDto.getApplications() != null) {
+                    if (category.getApplicationSortMode() == Category.SortMode.ALPHABETICAL) {
+                        enforceApplicationSortOrder(category);
+                    } else {
+                        List<Application> reorderedApps = new ArrayList<>();
+                        for (org.friesoft.porturl.dto.Application appDto : catDto.getApplications()) {
+                            applicationRepository.findById(appDto.getId()).ifPresent(reorderedApps::add);
+                        }
+                        category.setApplications(reorderedApps);
+                    }
+                }
+                categoryRepository.save(category);
             });
         }
     }
@@ -339,6 +350,19 @@ public class ApplicationService {
             first += max;
         } while (page.size() == max);
         return allRoles;
+    }
+
+    public void enforceApplicationSortOrder(Category category) {
+        if (category.getApplicationSortMode() == Category.SortMode.ALPHABETICAL && category.getApplications() != null) {
+            List<Application> sortedApps = new ArrayList<>(category.getApplications());
+            NaturalOrderComparator comparator = new NaturalOrderComparator();
+            sortedApps.sort((a, b) -> {
+                String nameA = a.getName() != null ? a.getName() : "";
+                String nameB = b.getName() != null ? b.getName() : "";
+                return comparator.compare(nameA, nameB);
+            });
+            category.setApplications(sortedApps);
+        }
     }
 }
 
