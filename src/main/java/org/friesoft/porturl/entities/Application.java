@@ -31,13 +31,7 @@ public class Application {
     private java.util.List<Category> categories = new java.util.ArrayList<>();
 
     @Column(nullable = true)
-    private String iconLarge;
-
-    @Column(nullable = true)
-    private String iconMedium;
-
-    @Column(nullable = true)
-    private String iconThumbnail;
+    private String icon;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_user_id", nullable = true)
@@ -46,18 +40,8 @@ public class Application {
     private User createdBy;
 
     @Transient
-    public String getIconUrlLarge() {
-        return buildIconUrl(this.iconLarge);
-    }
-
-    @Transient
-    public String getIconUrlMedium() {
-        return buildIconUrl(this.iconMedium);
-    }
-
-    @Transient
-    public String getIconUrlThumbnail() {
-        return buildIconUrl(this.iconThumbnail);
+    public String getIconUrl() {
+        return buildIconUrl(this.icon);
     }
 
     private String buildIconUrl(String filename) {

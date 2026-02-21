@@ -58,6 +58,7 @@ public class ApplicationService {
         Application newApp = new Application();
         newApp.setName(request.getName());
         newApp.setUrl(request.getUrl());
+        newApp.setIcon(request.getIcon());
         newApp.setCreatedBy(creator);
 
         if (request.getCategories() != null) {
@@ -89,9 +90,7 @@ public class ApplicationService {
                 .map(application -> {
                     application.setName(newApplicationData.getName());
                     application.setUrl(newApplicationData.getUrl());
-                    application.setIconLarge(newApplicationData.getIconLarge());
-                    application.setIconMedium(newApplicationData.getIconMedium());
-                    application.setIconThumbnail(newApplicationData.getIconThumbnail());
+                    application.setIcon(newApplicationData.getIcon());
 
                     // Handle roles
                     List<String> existingRoles = getRolesForApplication(id);
@@ -292,12 +291,8 @@ public class ApplicationService {
         dto.setId(app.getId());
         dto.setName(app.getName());
         dto.setUrl(app.getUrl());
-        dto.setIconLarge(app.getIconLarge());
-        dto.setIconMedium(app.getIconMedium());
-        dto.setIconThumbnail(app.getIconThumbnail());
-        dto.setIconUrlLarge(app.getIconUrlLarge());
-        dto.setIconUrlMedium(app.getIconUrlMedium());
-        dto.setIconUrlThumbnail(app.getIconUrlThumbnail());
+        dto.setIcon(app.getIcon());
+        dto.setIconUrl(app.getIconUrl());
         if (app.getCategories() != null) {
             dto.setCategories(app.getCategories().stream().map(this::mapCategoryToDtoSimple).collect(Collectors.toList()));
         }

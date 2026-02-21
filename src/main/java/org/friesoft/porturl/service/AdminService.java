@@ -116,27 +116,19 @@ public class AdminService {
                 .collect(Collectors.toList());
         export.setRoles(roles);
 
-        Map<String, String> images = new HashMap<>();
-        addImageIfPresent(images, "large", app.getIconLarge());
-        addImageIfPresent(images, "medium", app.getIconMedium());
-        addImageIfPresent(images, "thumbnail", app.getIconThumbnail());
-        export.setImages(images);
-
-        return export;
-    }
-
-    private void addImageIfPresent(Map<String, String> images, String key, String filename) {
-        if (filename != null && !filename.isBlank()) {
+        if (app.getIcon() != null && !app.getIcon().isBlank()) {
             try {
-                Path path = fileStorageService.load(filename);
+                Path path = fileStorageService.load(app.getIcon());
                 if (Files.exists(path)) {
                     byte[] bytes = Files.readAllBytes(path);
-                    images.put(key, Base64.getEncoder().encodeToString(bytes));
+                    export.setIcon(Base64.getEncoder().encodeToString(bytes));
                 }
             } catch (IOException e) {
                 // Log error or ignore
             }
         }
+
+        return export;
     }
 
     @Transactional
@@ -227,8 +219,8 @@ public class AdminService {
                     if (app.getCreatedBy() == null) {
                         app.setCreatedBy(creator);
                     }
-                    if (appExport.getImages() != null) {
-                        updateImageIfChanged(app, appExport.getImages());
+                    if (appExport.getIcon() != null) {
+                        updateIconIfChanged(app, appExport.getIcon());
                     }
                     // Clear links to be rebuilt
                     app.getCategories().clear();
@@ -296,10 +288,8 @@ public class AdminService {
         }
     }
 
-    private void updateImageIfChanged(Application app, Map<String, String> images) {
-        app.setIconLarge(syncBase64Image(app.getIconLarge(), images.get("large")));
-        app.setIconMedium(syncBase64Image(app.getIconMedium(), images.get("medium")));
-        app.setIconThumbnail(syncBase64Image(app.getIconThumbnail(), images.get("thumbnail")));
+    private void updateIconIfChanged(Application app, String iconBase64) {
+        app.setIcon(syncBase64Image(app.getIcon(), iconBase64));
     }
 
     private String syncBase64Image(String existingFilename, String base64) {

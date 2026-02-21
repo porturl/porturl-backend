@@ -55,9 +55,7 @@ public class ImageCleanupService {
         Set<String> activeImageFiles = new HashSet<>();
         Iterable<Application> applications = applicationRepository.findAll();
         applications.forEach(app -> {
-            if (app.getIconLarge() != null) activeImageFiles.add(app.getIconLarge());
-            if (app.getIconMedium() != null) activeImageFiles.add(app.getIconMedium());
-            if (app.getIconThumbnail() != null) activeImageFiles.add(app.getIconThumbnail());
+            if (app.getIcon() != null) activeImageFiles.add(app.getIcon());
         });
 
         Iterable<User> users = userRepository.findAll();
