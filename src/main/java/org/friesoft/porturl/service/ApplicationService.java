@@ -303,8 +303,6 @@ public class ApplicationService {
         org.friesoft.porturl.dto.Category dto = new org.friesoft.porturl.dto.Category();
         dto.setId(category.getId());
         dto.setName(category.getName());
-        dto.setIcon(category.getIcon());
-        dto.setEnabled(category.isEnabled());
         dto.setSortOrder(category.getSortOrder());
         dto.setApplicationSortMode(org.friesoft.porturl.dto.Category.ApplicationSortModeEnum.fromValue(category.getApplicationSortMode().name()));
         return dto;

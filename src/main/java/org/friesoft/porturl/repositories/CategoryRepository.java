@@ -15,17 +15,12 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllByOrderBySortOrderAsc();
 
     /**
-     * Finds all ENABLED categories and sorts them by their 'sortOrder' field.
-     */
-    List<Category> findByEnabledTrueOrderBySortOrderAsc();
-
-    /**
-     * Finds all distinct, enabled categories that are associated with a given list of applications.
+     * Finds all distinct categories that are associated with a given list of applications.
      * This is the core method for security-trimmed category filtering.
      *
      * @param applications The list of applications the user is allowed to see.
      * @return A sorted list of visible and relevant categories.
      */
-    @Query("SELECT DISTINCT c FROM Category c JOIN c.applications a WHERE a IN :applications AND c.enabled = true ORDER BY c.sortOrder ASC")
-    List<Category> findDistinctByApplicationInAndEnabledTrueOrderBySortOrderAsc(@Param("applications") java.util.Collection<Application> applications);
+    @Query("SELECT DISTINCT c FROM Category c JOIN c.applications a WHERE a IN :applications ORDER BY c.sortOrder ASC")
+    List<Category> findDistinctByApplicationInOrderBySortOrderAsc(@Param("applications") java.util.Collection<Application> applications);
 }

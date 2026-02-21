@@ -95,9 +95,7 @@ public class AdminService {
         CategoryExport export = new CategoryExport();
         export.setName(category.getName());
         export.setSortOrder(category.getSortOrder());
-        export.setIcon(category.getIcon());
         export.setDescription(category.getDescription());
-        export.setEnabled(category.isEnabled());
         export.setApplicationSortMode(CategoryExport.ApplicationSortModeEnum.valueOf(category.getApplicationSortMode().name()));
         return export;
     }
@@ -174,9 +172,7 @@ public class AdminService {
 
                     category.setName(name);
                     category.setSortOrder(catExport.getSortOrder());
-                    category.setIcon(catExport.getIcon());
                     category.setDescription(catExport.getDescription());
-                    category.setEnabled(catExport.getEnabled() != null ? catExport.getEnabled() : true);
                     if (catExport.getApplicationSortMode() != null) {
                         category.setApplicationSortMode(Category.SortMode.valueOf(catExport.getApplicationSortMode().name()));
                     }

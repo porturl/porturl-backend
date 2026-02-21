@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @RestController
 public class CategoryController implements CategoryApi {
@@ -31,7 +30,7 @@ public class CategoryController implements CategoryApi {
 
     @Override
     public ResponseEntity<List<org.friesoft.porturl.dto.Category>> findAllCategories() {
-        List<org.friesoft.porturl.dto.Category> dtos = StreamSupport.stream(this.categoryService.getVisibleCategories().spliterator(), false)
+        List<org.friesoft.porturl.dto.Category> dtos = this.categoryService.getVisibleCategories().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
@@ -54,10 +53,8 @@ public class CategoryController implements CategoryApi {
             if (categoryDto.getApplicationSortMode() != null) {
                 category.setApplicationSortMode(Category.SortMode.valueOf(categoryDto.getApplicationSortMode().getValue()));
             }
-            category.setIcon(categoryDto.getIcon());
             category.setDescription(categoryDto.getDescription());
-            category.setEnabled(categoryDto.getEnabled() != null ? categoryDto.getEnabled() : true);
-            
+
             Category savedCategory = this.repository.save(category);
             return ResponseEntity.status(201).body(mapToDto(savedCategory));
         } catch (DataIntegrityViolationException e) {
@@ -75,9 +72,7 @@ public class CategoryController implements CategoryApi {
                         category.setApplicationSortMode(Category.SortMode.valueOf(updatedCategoryDto.getApplicationSortMode().getValue()));
                         applicationService.enforceApplicationSortOrder(category);
                     }
-                    category.setIcon(updatedCategoryDto.getIcon());
                     category.setDescription(updatedCategoryDto.getDescription());
-                    category.setEnabled(updatedCategoryDto.getEnabled() != null ? updatedCategoryDto.getEnabled() : true);
                     return ResponseEntity.ok(mapToDto(repository.save(category)));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -117,8 +112,6 @@ public class CategoryController implements CategoryApi {
         org.friesoft.porturl.dto.Category dto = new org.friesoft.porturl.dto.Category();
         dto.setId(category.getId());
         dto.setName(category.getName());
-        dto.setIcon(category.getIcon());
-        dto.setEnabled(category.isEnabled());
         dto.setSortOrder(category.getSortOrder());
         dto.setApplicationSortMode(org.friesoft.porturl.dto.Category.ApplicationSortModeEnum.fromValue(category.getApplicationSortMode().name()));
         dto.setDescription(category.getDescription());

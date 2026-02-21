@@ -35,23 +35,10 @@ public class Category {
     private SortMode applicationSortMode = SortMode.CUSTOM;
 
     /**
-     * An identifier for an icon to be displayed next to the category title.
-     * e.g., "fas fa-server" for a Font Awesome icon.
-     */
-    @Column(nullable = true)
-    private String icon;
-
-    /**
      * An optional description for the category, which can be displayed as a tooltip.
      */
     @Column(nullable = true, length = 512)
     private String description;
-
-    /**
-     * A flag to easily enable or disable the display of the entire category.
-     */
-    @Column(nullable = false)
-    private boolean enabled = true;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

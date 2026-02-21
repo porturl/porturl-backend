@@ -35,8 +35,8 @@ public class CategoryService {
                 .map(dto -> dto.getApplication().getId())
                 .collect(Collectors.toSet());
 
-        // 2. Fetch all enabled categories. 
-        List<Category> categories = categoryRepository.findByEnabledTrueOrderBySortOrderAsc();
+        // 2. Fetch all categories. 
+        List<Category> categories = categoryRepository.findAllByOrderBySortOrderAsc();
 
         // 3. Filter and sort the applications list within EACH category
         for (Category cat : categories) {
