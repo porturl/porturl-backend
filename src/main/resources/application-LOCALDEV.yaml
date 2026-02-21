@@ -1,0 +1,43 @@
+---
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081/realms/porturl-local
+porturl:
+  cleanup:
+    enabled: true
+    cron: "0 * * * * *"
+  otel:
+    enabled: false
+  storage:
+    type: YAML
+    #type: SQL
+keycloak:
+  admin:
+    server-url: http://localhost:8081
+    realm: porturl-local
+    client-id: porturl-backend-api-client
+    client-secret: local-demo-secret
+springdoc:
+  swagger-ui:
+    oauth:
+      client-id: porturl-backend-swagger-client
+      use-pkce-with-authorization-code-grant: true
+management:
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:4318/v1/metrics
+  opentelemetry:
+    logging:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/logs
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/traces
+    sampling:
+       probability: 1.0

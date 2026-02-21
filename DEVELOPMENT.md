@@ -6,70 +6,42 @@ This guide explains how to set up your local development environment for the `po
 
 - Java 25 (GraalVM recommended)
 - Podman (or Docker) with `podman-compose`
-- A Grafana Cloud account
 
-## Local Observability with Grafana Alloy
+## Local Development Stack
 
-To monitor the application locally and send data to Grafana Cloud, we use Grafana Alloy.
+We use a centralized Docker Compose stack located in the `local-dev/` directory. This includes:
+- **Keycloak**: For authentication and authorization.
+- **PostgreSQL**: Database for Keycloak.
+- **Grafana Alloy**: For local observability and telemetry.
 
-### 1. Configure Grafana Cloud Credentials
+### 1. Setup Environment
 
-Copy the sample environment file and fill in your OTLP credentials:
+Navigate to the `local-dev` directory and initialize your environment:
 
 ```bash
-cp .env.alloy.sample .env.alloy
+cd local-dev
+cp .env.sample .env
 ```
 
-Edit `.env.alloy` and provide:
-- `GRAFANA_CLOUD_OTLP_URL`: Your OTLP endpoint (e.g., `https://otlp-gateway-.../otlp`)
-- `GRAFANA_CLOUD_USER`: Your **Numeric Instance ID**
-- `GRAFANA_CLOUD_API_KEY`: Your Cloud Access Policy Token
+If you want to send telemetry to Grafana Cloud, edit `.env` and provide your OTLP credentials.
 
-### 2. Start Alloy
-
-Run Alloy using Podman Compose:
+### 2. Start the Stack
 
 ```bash
-podman-compose -f docker-compose.alloy.yml --env-file .env.alloy up -d
+podman-compose up -d
 ```
 
 **Verification:**
-- Check logs: `podman logs -f alloy-dev`
+- Keycloak UI: [http://localhost:8081](http://localhost:8081) (Admin: `admin`/`admin`)
 - Alloy UI: [http://localhost:12345](http://localhost:12345)
 
-### 3. Configure the Backend
+### 3. Run the Backend
 
-The backend is configured to act as a gateway for OTLP traffic. This means both the backend itself and any other clients (like the mobile app) can send data to the backend, which then proxies it to Alloy.
-
-**How it works:**
-- **Backend Port**: 8080
-- **Gateway Path**: `/otlp/**` -> Proxies to `localhost:4318` (Alloy)
-
-**Configuration in `src/main/resources/application-DEV.yaml`:**
-
-```yaml
-management:
-  otlp:
-    metrics:
-      export:
-        url: http://localhost:8080/otlp/v1/metrics
-    tracing:
-      export:
-        url: http://localhost:8080/otlp/v1/traces
-    logging:
-      export:
-        url: http://localhost:8080/otlp/v1/logs
-```
-
-Then run the application with the `DEV` profile:
+To point the backend to the local Keycloak instance, run with the `LOCALDEV` profile:
 
 ```bash
-./gradlew bootRun --args='--spring.profiles.active=DEV'
+./gradlew bootRun --args='--spring.profiles.active=LOCALDEV'
 ```
-
-**Verification:**
-- You should see successful POST requests to `/otlp/...` in the backend logs (status 200).
-- Data should appear in the Alloy UI.
 
 ## Testing
 
@@ -79,4 +51,4 @@ Then run the application with the `DEV` profile:
 ```
 
 ### Manual API Testing
-The project includes Bruno tests in the `bruno-tests` directory.
+The project includes Bruno tests in the `bruno-tests` directory. See the README in that folder for instructions on how to run them against your local setup.
