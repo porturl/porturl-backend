@@ -32,4 +32,10 @@ public class AdminController implements AdminApi {
         adminService.importData(data, principal);
         return ResponseEntity.noContent().build();
     }
+
+    @Override
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<java.util.List<org.friesoft.porturl.dto.KeycloakClientDto>> scanRealmClients(String realm) {
+        return ResponseEntity.ok(adminService.scanRealmForClients(realm));
+    }
 }

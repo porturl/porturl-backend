@@ -1,0 +1,2 @@
+ALTER TABLE application ADD COLUMN client_id VARCHAR(255);
+ALTER TABLE application ADD COLUMN realm VARCHAR(255);

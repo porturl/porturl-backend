@@ -91,6 +91,26 @@ public class AdminService {
         return exportData;
     }
 
+    public List<org.friesoft.porturl.dto.KeycloakClientDto> scanRealmForClients(String targetRealm) {
+        // Fallback to configured realm if not specified, but for scanning we usually want explicit
+        String realmToUse = (targetRealm != null && !targetRealm.isBlank()) ? targetRealm : properties.getKeycloakAdmin().getRealm();
+
+        try {
+            return applicationService.getKeycloakAdminClient().realm(realmToUse).clients().findAll().stream()
+                    .map(client -> {
+                        org.friesoft.porturl.dto.KeycloakClientDto dto = new org.friesoft.porturl.dto.KeycloakClientDto();
+                        dto.setId(client.getId());
+                        dto.setClientId(client.getClientId());
+                        dto.setName(client.getName());
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Failed to scan clients in realm {}", realmToUse, e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not scan realm: " + e.getMessage());
+        }
+    }
+
     private CategoryExport mapCategoryToExport(Category category) {
         CategoryExport export = new CategoryExport();
         export.setName(category.getName());
@@ -105,13 +125,26 @@ public class AdminService {
         export.setName(app.getName());
         export.setUrl(app.getUrl());
         export.setCategories(app.getCategories().stream().map(Category::getName).collect(Collectors.toList()));
-        
-        String appPrefix = "ROLE_" + app.getName().toUpperCase().replaceAll("\\s+", "_") + "_";
-        List<String> roles = allRoles.stream()
-                .map(org.keycloak.representations.idm.RoleRepresentation::getName)
-                .filter(name -> name.startsWith(appPrefix))
-                .map(name -> name.substring(appPrefix.length()).toLowerCase())
-                .collect(Collectors.toList());
+        export.setClientId(app.getClientId());
+        export.setRealm(app.getRealm());
+
+        List<String> roles;
+        if (app.getClientId() != null && !app.getClientId().isBlank()) {
+             // For linked apps, we don't necessarily export roles as they are managed in Keycloak.
+             // However, if we want to preserve "PortUrl knowledge" of what roles *were* assigned,
+             // that's stored in User assignments, not on the App definition itself.
+             // The "roles" field in export usually meant "roles created by PortUrl".
+             // We can return an empty list or specific roles if needed.
+             // For now, let's keep it empty for linked apps as we don't auto-create them on import.
+             roles = new ArrayList<>();
+        } else {
+            String appPrefix = "ROLE_" + app.getName().toUpperCase().replaceAll("\\s+", "_") + "_";
+            roles = allRoles.stream()
+                    .map(org.keycloak.representations.idm.RoleRepresentation::getName)
+                    .filter(name -> name.startsWith(appPrefix))
+                    .map(name -> name.substring(appPrefix.length()).toLowerCase())
+                    .collect(Collectors.toList());
+        }
         export.setRoles(roles);
 
         if (app.getIcon() != null && !app.getIcon().isBlank()) {
@@ -212,6 +245,9 @@ public class AdminService {
 
                     app.setName(name);
                     app.setUrl(appExport.getUrl());
+                    app.setClientId(appExport.getClientId());
+                    app.setRealm(appExport.getRealm());
+
                     if (app.getCreatedBy() == null) {
                         app.setCreatedBy(creator);
                     }
@@ -224,11 +260,13 @@ public class AdminService {
                     Application savedApp = applicationRepository.save(app);
                     synchronizedApps.put(name, savedApp);
 
-                    // Sync roles
-                    try {
-                        applicationService.createApplicationRoles(savedApp, appExport.getRoles());
-                    } catch (Exception e) {
-                        log.warn("Could not sync Keycloak roles for application {}: {}", name, e.getMessage());
+                    // Sync roles only if NOT linked
+                    if (app.getClientId() == null || app.getClientId().isBlank()) {
+                        try {
+                            applicationService.createApplicationRoles(savedApp, appExport.getRoles());
+                        } catch (Exception e) {
+                            log.warn("Could not sync Keycloak roles for application {}: {}", name, e.getMessage());
+                        }
                     }
                 }
             }
