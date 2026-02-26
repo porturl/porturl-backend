@@ -80,6 +80,8 @@ logging:
   level:
     root: INFO
     org.friesoft.porturl: DEBUG
+server:
+  forward-headers-strategy: FRAMEWORK
 spring:
   servlet:
     multipart:
