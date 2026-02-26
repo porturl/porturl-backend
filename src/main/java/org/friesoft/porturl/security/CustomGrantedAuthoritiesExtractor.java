@@ -44,14 +44,32 @@ public class CustomGrantedAuthoritiesExtractor {
                 return userRepository.save(newUser);
             });
 
+        List<GrantedAuthority> authorities = new java.util.ArrayList<>();
+
+        // 1. Extract Realm Roles
         Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
         if (realmAccess != null && realmAccess.containsKey("roles")) {
             List<String> roles = jsonMapper.convertValue(realmAccess.get("roles"), new TypeReference<>() {});
-            return roles.stream()
+            roles.stream()
                 .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
+                .forEach(authorities::add);
         }
 
-        return Collections.emptyList();
+        // 2. Extract Client Roles (for linked apps)
+        // Format in JWT: "resource_access": { "client-id": { "roles": ["role1", "role2"] } }
+        Map<String, Object> resourceAccess = jwt.getClaimAsMap("resource_access");
+        if (resourceAccess != null) {
+            resourceAccess.forEach((clientId, access) -> {
+                Map<String, Object> accessMap = jsonMapper.convertValue(access, new TypeReference<>() {});
+                if (accessMap.containsKey("roles")) {
+                    List<String> roles = jsonMapper.convertValue(accessMap.get("roles"), new TypeReference<>() {});
+                    roles.stream()
+                        .map(role -> new SimpleGrantedAuthority("APP_" + clientId + "_" + role))
+                        .forEach(authorities::add);
+                }
+            });
+        }
+
+        return authorities;
     }
 }

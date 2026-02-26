@@ -39,6 +39,12 @@ public class Application {
     @ToString.Exclude
     private User createdBy;
 
+    @Column(nullable = true)
+    private String clientId;
+
+    @Column(nullable = true)
+    private String realm;
+
     @Transient
     public String getIconUrl() {
         return buildIconUrl(this.icon);

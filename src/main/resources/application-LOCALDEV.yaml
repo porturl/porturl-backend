@@ -1,11 +1,18 @@
 ---
+logging:
+  level:
+    org.keycloak.admin.client: DEBUG
+    org.friesoft.porturl: DEBUG
+
 spring:
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8081/realms/porturl-local
+          issuer-uri: https://localhost:8443/realms/porturl-local
 porturl:
+  security:
+    validate-issuer: false
   cleanup:
     enabled: true
     cron: "0 * * * * *"
@@ -14,12 +21,20 @@ porturl:
   storage:
     type: YAML
     #type: SQL
-keycloak:
-  admin:
-    server-url: http://localhost:8081
+  keycloak:
     realm: porturl-local
-    client-id: porturl-backend-api-client
-    client-secret: local-demo-secret
+    truststore-path: local-dev/tls/truststore.jks
+    truststore-password: changeit
+    admin:
+      server-url: https://localhost:8443
+      realm: porturl-local
+      client-id: porturl-management-client
+      client-secret: local-management-secret
+    cross-realm:
+      server-url: https://localhost:8443
+      realm: master
+      client-id: porturl-cross-realm-client
+      client-secret: master-management-secret
 springdoc:
   swagger-ui:
     oauth:

@@ -45,3 +45,4 @@ out/
 !testdata/env.template
 
 local.properties
+local-dev/tls/*

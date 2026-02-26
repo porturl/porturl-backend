@@ -4,6 +4,8 @@ This document outlines how to configure Keycloak and use the backend API to dyna
 
 ## 1. Keycloak Configuration
 
+For a detailed guide on setting up Keycloak manually for PortUrl, please refer to [KEYCLOAK_SETUP.md](KEYCLOAK_SETUP.md).
+
 The backend uses Keycloak as a single source of truth for all user permissions. It can dynamically create and manage the entire role hierarchy for new applications. To enable this, the backend requires a dedicated service account with administrative privileges.
 
 ### Step 1: Create a Service Account Client
@@ -11,7 +13,7 @@ The backend uses Keycloak as a single source of truth for all user permissions. 
 This client allows the backend to authenticate itself against the Keycloak Admin API.
 
 1.  Navigate to your Keycloak Admin Console -> **Clients** -> **Create client**.
-2.  **Client ID:** `porturl-backend-api-client`
+2.  **Client ID:** `porturl-management-client`
 3.  **Client authentication:** `On`
 4.  Click **Save**.
 
@@ -19,19 +21,23 @@ This client allows the backend to authenticate itself against the Keycloak Admin
 
 1.  After creating the client, stay on its settings page and go to the **Service account roles** tab.
 2.  Click **Assign role**.
-3.  In the search box, type `realm-admin` and assign this role. This composite role grants all the necessary permissions for the backend to manage users and roles.
+3.  Filter by client and search for `realm-management`.
+4.  Assign the `realm-admin` role from the `realm-management` client. This role grants the necessary permissions for the backend to manage users and roles within the realm.
 
 ### Step 3: Obtain the Client Secret
 
-1.  Go to the **Credentials** tab for the `porturl-backend-api-client`.
+1.  Go to the **Credentials** tab for the `porturl-management-client`.
 2.  You will see a field labeled **Client Secret**. Copy this value.
-3.  Add this secret to your backend's `application.properties` file:
+3.  Add this secret to your backend's configuration (e.g., `application.yaml` or environment variables):
 
-    ```properties
-    keycloak.admin.server-url=http://localhost:8080
-    keycloak.admin.realm=your-realm-name
-    keycloak.admin.client-id=porturl-backend-api-client
-    keycloak.admin.client-secret=PASTE_THE_COPIED_SECRET_HERE
+    ```yaml
+    porturl:
+      keycloak:
+        admin:
+          server-url: http://localhost:8080
+          realm: your-realm-name
+          client-id: porturl-management-client
+          client-secret: PASTE_THE_COPIED_SECRET_HERE
     ```
 
 ### Step 4: Define a Port-URL Administrator Role

@@ -1,0 +1,105 @@
+{
+  "realm": "porturl-local",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "ROLE_ADMIN",
+        "description": "Administrator role"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ROLE_ADMIN",
+        "offline_access",
+        "uma_authorization"
+      ],
+      "requiredActions": []
+    },
+    {
+      "username": "service-account-porturl-management-client",
+      "enabled": true,
+      "serviceAccountClientId": "porturl-management-client",
+      "realmRoles": [
+        "ROLE_ADMIN"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "realm-admin"
+        ]
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "porturl-management-client",
+      "name": "PortUrl Local Management",
+      "enabled": true,
+      "secret": "local-management-secret",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "authorizationServicesEnabled": false,
+      "publicClient": false
+    },
+    {
+      "clientId": "porturl-android",
+      "name": "PortUrl Android App",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": [
+        "org.friesoft.porturl:/*",
+        "http://localhost:*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "porturl-backend-swagger-client",
+      "name": "Swagger UI",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": [
+        "http://localhost:8080/swagger-ui/oauth2-redirect.html"
+      ],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "porturl-broker",
+      "name": "Generic Realm Broker",
+      "enabled": true,
+      "secret": "porturl-broker-secret",
+      "publicClient": false,
+      "redirectUris": [
+        "https://localhost:8443/realms/*/broker/porturl-idp/endpoint"
+      ],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true
+    }
+  ]
+}
