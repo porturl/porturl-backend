@@ -1,0 +1,46 @@
+{
+  "realm": "master",
+  "enabled": true,
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ],
+      "requiredActions": []
+    },
+    {
+      "username": "service-account-porturl-cross-realm-client",
+      "enabled": true,
+      "serviceAccountClientId": "porturl-cross-realm-client",
+      "realmRoles": [
+        "admin"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "porturl-cross-realm-client",
+      "name": "PortUrl Cross-Realm Management",
+      "enabled": true,
+      "secret": "master-management-secret",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "authorizationServicesEnabled": false,
+      "publicClient": false
+    }
+  ]
+}

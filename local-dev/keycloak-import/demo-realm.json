@@ -1,0 +1,183 @@
+{
+  "realm": "demo",
+  "enabled": true,
+  "identityProviders": [
+    {
+      "alias": "porturl-idp",
+      "displayName": "PortUrl Login",
+      "providerId": "keycloak-oidc",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "authenticateByDefault": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientAuthMethod": "client_secret_post",
+        "clientId": "porturl-broker",
+        "clientSecret": "porturl-broker-secret",
+        "tokenUrl": "https://localhost:8443/realms/porturl-local/protocol/openid-connect/token",
+        "authorizationUrl": "https://localhost:8443/realms/porturl-local/protocol/openid-connect/auth",
+        "logoutUrl": "https://localhost:8443/realms/porturl-local/protocol/openid-connect/logout",
+        "userInfoUrl": "https://localhost:8443/realms/porturl-local/protocol/openid-connect/userinfo",
+        "issuer": "https://localhost:8443/realms/porturl-local",
+        "syncMode": "IMPORT",
+        "useJwksUrl": "true"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "username-importer",
+      "identityProviderAlias": "porturl-idp",
+      "identityProviderMapper": "oidc-username-idp-mapper",
+      "config": {
+        "template": "${CLAIM.preferred_username}",
+        "target": "LOCAL"
+      }
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "idp-redirect-config",
+      "config": {
+        "defaultProvider": "porturl-idp"
+      }
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "browser-with-redirect",
+      "description": "browser based authentication with automatic idp redirect",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "userSetupAllowed": false,
+          "authenticatorFlow": false
+        },
+        {
+          "authenticator": "identity-provider-redirector",
+          "requirement": "ALTERNATIVE",
+          "priority": 25,
+          "authenticatorConfig": "idp-redirect-config",
+          "userSetupAllowed": false,
+          "authenticatorFlow": false
+        },
+        {
+          "authenticator": "auth-spnego",
+          "requirement": "DISABLED",
+          "priority": 30,
+          "userSetupAllowed": false,
+          "authenticatorFlow": false
+        },
+        {
+          "requirement": "ALTERNATIVE",
+          "priority": 30,
+          "flowAlias": "forms",
+          "userSetupAllowed": false,
+          "authenticatorFlow": true
+        }
+      ]
+    },
+    {
+      "alias": "forms",
+      "description": "Username, password, otp and other form based authenticator",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-username-password-form",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false,
+          "authenticatorFlow": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "requirement": "OPTIONAL",
+          "priority": 20,
+          "userSetupAllowed": false,
+          "authenticatorFlow": false
+        }
+      ]
+    }
+  ],
+  "browserFlow": "browser-with-redirect",
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "email": "testuser@example.com",
+      "firstName": "Test",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": []
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "grafana",
+      "name": "Grafana",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "*"
+      ]
+    },
+    {
+      "clientId": "xwiki",
+      "name": "XWiki",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "*"
+      ]
+    }
+  ],
+  "roles": {
+    "client": {
+      "grafana": [
+        {
+          "name": "admin",
+          "description": "Grafana Admin"
+        },
+        {
+          "name": "editor",
+          "description": "Grafana Editor"
+        },
+        {
+          "name": "viewer",
+          "description": "Grafana Viewer"
+        }
+      ],
+      "xwiki": [
+        {
+          "name": "admin",
+          "description": "XWiki Admin"
+        },
+        {
+          "name": "user",
+          "description": "XWiki User"
+        }
+      ]
+    }
+  }
+}

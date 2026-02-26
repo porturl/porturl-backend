@@ -540,6 +540,9 @@ components:
           type: string
           nullable: true
           description: "Optional Keycloak Realm where the client resides"
+        isLinked:
+          type: boolean
+          description: "Indicates if the application is correctly linked to a Keycloak client"
         categories:
           type: array
           items:

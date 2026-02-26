@@ -2,6 +2,7 @@ package org.friesoft.porturl.service;
 
 import jakarta.persistence.EntityManager;
 import jakarta.ws.rs.NotFoundException;
+import org.friesoft.porturl.config.PorturlProperties;
 import org.friesoft.porturl.controller.exceptions.ApplicationNotFoundException;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.entities.Category;
@@ -13,7 +14,6 @@ import org.friesoft.porturl.util.NaturalOrderComparator;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RolesResource;
 import org.keycloak.representations.idm.RoleRepresentation;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -31,27 +31,50 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@lombok.extern.slf4j.Slf4j
 public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final Keycloak keycloakAdminClient;
+    private final Keycloak masterKeycloakAdminClient;
     private final EntityManager entityManager;
+    private final PorturlProperties properties;
 
-    @Value("${keycloak.admin.realm}")
-    private String realm;
-
-    public ApplicationService(ApplicationRepository applicationRepository, UserRepository userRepository, CategoryRepository categoryRepository, Keycloak keycloakAdminClient, EntityManager entityManager) {
+    public ApplicationService(ApplicationRepository applicationRepository,
+                              UserRepository userRepository,
+                              CategoryRepository categoryRepository,
+                              @org.springframework.beans.factory.annotation.Qualifier("keycloakAdmin") Keycloak keycloakAdminClient,
+                              @org.springframework.beans.factory.annotation.Qualifier("masterKeycloakAdmin") Keycloak masterKeycloakAdminClient,
+                              EntityManager entityManager,
+                              PorturlProperties properties) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.keycloakAdminClient = keycloakAdminClient;
+        this.masterKeycloakAdminClient = masterKeycloakAdminClient;
         this.entityManager = entityManager;
+        this.properties = properties;
     }
 
     public Keycloak getKeycloakAdminClient() {
         return keycloakAdminClient;
+    }
+
+    public Keycloak getKeycloakAdminClient(String targetRealm) {
+        String localRealm = getRealm();
+        if (targetRealm == null || targetRealm.isBlank() || targetRealm.equals(localRealm)) {
+            return keycloakAdminClient;
+        }
+        return masterKeycloakAdminClient;
+    }
+
+    private String getRealm() {
+        if (properties.getKeycloak().getRealm() != null && !properties.getKeycloak().getRealm().isBlank()) {
+            return properties.getKeycloak().getRealm();
+        }
+        return properties.getKeycloak().getAdmin().getRealm();
     }
 
     @Transactional
@@ -67,6 +90,12 @@ public class ApplicationService {
         newApp.setClientId(request.getClientId());
         newApp.setRealm(request.getRealm());
 
+        // Clear cache for this client
+        if (newApp.getClientId() != null) {
+            String targetRealm = (newApp.getRealm() != null && !newApp.getRealm().isBlank()) ? newApp.getRealm() : getRealm();
+            clientExistsCache.remove(targetRealm + ":" + newApp.getClientId());
+        }
+
         if (request.getCategories() != null) {
             for (org.friesoft.porturl.dto.Category catDto : request.getCategories()) {
                 Category managedCategory = categoryRepository.findById(catDto.getId())
@@ -80,14 +109,16 @@ public class ApplicationService {
         Application savedApp = applicationRepository.save(newApp);
         entityManager.flush();
 
-        // Only create managed roles if NOT linked to an existing client
-        if (newApp.getClientId() == null || newApp.getClientId().isBlank()) {
-            createApplicationRoles(savedApp, request.getRoles());
+        // Handle roles
+        if (savedApp.getClientId() == null || savedApp.getClientId().isBlank()) {
+            createAccessRole(savedApp);
+        } else {
+            createClientRoles(savedApp, request.getRoles());
+        }
 
-            if (request.getRoles() != null && !request.getRoles().isEmpty()) {
-                String highestRole = request.getRoles().get(0);
-                assignRoleToUser(savedApp.getId(), creator.getId(), highestRole);
-            }
+        if (request.getRoles() != null && !request.getRoles().isEmpty()) {
+            String highestRole = request.getRoles().get(0);
+            assignRoleToUser(savedApp.getId(), creator.getId(), highestRole);
         }
 
         return applicationRepository.findById(savedApp.getId()).orElseThrow(() -> new ApplicationNotFoundException(savedApp.getId()));
@@ -103,27 +134,33 @@ public class ApplicationService {
                     application.setClientId(newApplicationData.getClientId());
                     application.setRealm(newApplicationData.getRealm());
 
-                    // Handle roles only if NOT linked
-                    if (application.getClientId() == null || application.getClientId().isBlank()) {
-                        List<String> existingRoles = getRolesForApplication(id);
-                        List<String> newRoles = newApplicationData.getAvailableRoles();
+                    // Clear cache for this client
+                    if (application.getClientId() != null) {
+                        String targetRealm = (application.getRealm() != null && !application.getRealm().isBlank()) ? application.getRealm() : getRealm();
+                        clientExistsCache.remove(targetRealm + ":" + application.getClientId());
+                    }
 
-                        if (newRoles != null) {
-                            List<String> rolesToAdd = newRoles.stream()
-                                    .filter(role -> !existingRoles.contains(role))
-                                    .collect(Collectors.toList());
+                    // Handle roles
+                    List<String> existingRoles = getRolesForApplication(id);
+                    List<String> newRoles = newApplicationData.getAvailableRoles();
 
-                            List<String> rolesToRemove = existingRoles.stream()
-                                    .filter(role -> !newRoles.contains(role))
-                                    .collect(Collectors.toList());
+                    if (newRoles != null && application.getClientId() != null && !application.getClientId().isBlank()) {
+                        List<String> rolesToAdd = newRoles.stream()
+                                .filter(role -> !existingRoles.contains(role))
+                                .collect(Collectors.toList());
 
-                            if (!rolesToAdd.isEmpty()) {
-                                createApplicationRoles(application, rolesToAdd);
-                            }
-                            if (!rolesToRemove.isEmpty()) {
-                                deleteApplicationRoles(application, rolesToRemove);
-                            }
+                        List<String> rolesToRemove = existingRoles.stream()
+                                .filter(role -> !newRoles.contains(role))
+                                .collect(Collectors.toList());
+
+                        if (!rolesToAdd.isEmpty()) {
+                            createClientRoles(application, rolesToAdd);
                         }
+                        if (!rolesToRemove.isEmpty()) {
+                            deleteClientRoles(application, rolesToRemove);
+                        }
+                    } else if (newRoles != null && !newRoles.isEmpty()) {
+                        log.warn("Attempted to add roles to an unlinked application {}. Roles are only supported for linked applications.", application.getName());
                     }
 
 
@@ -184,44 +221,62 @@ public class ApplicationService {
     }
 
     @Transactional
-    public void createApplicationRoles(Application app, List<String> roleNames) {
-        if (roleNames == null || roleNames.isEmpty()) return;
-        RolesResource rolesResource = keycloakAdminClient.realm(realm).roles();
+    public void createAccessRole(Application app) {
+        RolesResource rolesResource = keycloakAdminClient.realm(getRealm()).roles();
         String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
         String accessRoleName = "APP_" + appNameUpper + "_ACCESS";
         createRoleIfNotExists(rolesResource, accessRoleName, "Grants basic access to " + app.getName());
-        RoleRepresentation accessRole = rolesResource.get(accessRoleName).toRepresentation();
-        for (String roleName : roleNames) {
-            String roleNameUpper = roleName.toUpperCase();
-            String permRoleName = "PERM_" + appNameUpper + "_" + roleNameUpper;
-            createRoleIfNotExists(rolesResource, permRoleName, "Grants " + roleName + " permissions for " + app.getName());
-            RoleRepresentation permRole = rolesResource.get(permRoleName).toRepresentation();
-            String compositeRoleName = "ROLE_" + appNameUpper + "_" + roleNameUpper;
-            createRoleIfNotExists(rolesResource, compositeRoleName, "User role for " + roleName + " in " + app.getName());
-            rolesResource.get(compositeRoleName).addComposites(List.of(accessRole, permRole));
+    }
+
+    @Transactional
+    public void deleteAccessRole(Application app) {
+        RolesResource rolesResource = keycloakAdminClient.realm(getRealm()).roles();
+        String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
+        String accessRoleName = "APP_" + appNameUpper + "_ACCESS";
+        try {
+            rolesResource.get(accessRoleName).remove();
+        } catch (NotFoundException e) {
+            // Ignore
+        }
+    }
+
+    private String getAccessRoleName(Application app) {
+        String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
+        return "APP_" + appNameUpper + "_ACCESS";
+    }
+
+    @Transactional
+    public void createClientRoles(Application app, List<String> roleNames) {
+        try {
+            createAccessRole(app);
+            if (roleNames == null || roleNames.isEmpty()) return;
+            String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : getRealm();
+            String clientUuid = getClientUuid(targetRealm, app.getClientId());
+            RolesResource rolesResource = getKeycloakAdminClient(targetRealm).realm(targetRealm).clients().get(clientUuid).roles();
+
+            for (String roleName : roleNames) {
+                if (rolesResource.list().stream().noneMatch(r -> r.getName().equals(roleName))) {
+                    RoleRepresentation newRole = new RoleRepresentation(roleName, "Created by PortUrl", false);
+                    rolesResource.create(newRole);
+                }
+            }
+        } catch (jakarta.ws.rs.WebApplicationException | org.springframework.web.server.ResponseStatusException e) {
+            log.warn("Failed to synchronize Keycloak roles for application {}: {}. This is often expected in dev environments if the target realm/client is missing.", app.getName(), e.getMessage());
         }
     }
 
     @Transactional
-    public void deleteApplicationRoles(Application app, List<String> roleNames) {
+    public void deleteClientRoles(Application app, List<String> roleNames) {
         if (roleNames == null || roleNames.isEmpty()) return;
-        RolesResource rolesResource = keycloakAdminClient.realm(realm).roles();
-        String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
+        String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : getRealm();
+        String clientUuid = getClientUuid(targetRealm, app.getClientId());
+        RolesResource rolesResource = getKeycloakAdminClient(targetRealm).realm(targetRealm).clients().get(clientUuid).roles();
 
         for (String roleName : roleNames) {
-            String roleNameUpper = roleName.toUpperCase();
-            String compositeRoleName = "ROLE_" + appNameUpper + "_" + roleNameUpper;
-            String permRoleName = "PERM_" + appNameUpper + "_" + roleNameUpper;
-
             try {
-                rolesResource.get(compositeRoleName).remove();
+                rolesResource.get(roleName).remove();
             } catch (NotFoundException e) {
-                // Role might not exist, which is fine
-            }
-            try {
-                rolesResource.get(permRoleName).remove();
-            } catch (NotFoundException e) {
-                // Role might not exist, which is fine
+                // Ignore
             }
         }
     }
@@ -240,6 +295,17 @@ public class ApplicationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        String realm = getRealm();
+        String accessRoleName = getAccessRoleName(app);
+
+        // Always ensure Access Role is assigned in PortUrl Realm
+        RoleRepresentation accessRole = keycloakAdminClient.realm(realm).roles().get(accessRoleName).toRepresentation();
+        keycloakAdminClient.realm(realm).users().get(user.getProviderUserId()).roles().realmLevel().add(List.of(accessRole));
+
+        if (role.equals(accessRoleName)) {
+            return; // Only access role was requested, we are done
+        }
+
         if (app.getClientId() != null && !app.getClientId().isBlank()) {
             // Linked App: Assign Client Role in Target Realm
             String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : realm;
@@ -256,30 +322,30 @@ public class ApplicationService {
             org.keycloak.representations.idm.UserRepresentation portUrlUser = keycloakAdminClient.realm(realm).users().get(portUrlUserId).toRepresentation();
             String usernameToSearch = portUrlUser.getUsername();
 
-            List<org.keycloak.representations.idm.UserRepresentation> targetUsers = keycloakAdminClient.realm(targetRealm).users().search(usernameToSearch);
+            List<org.keycloak.representations.idm.UserRepresentation> targetUsers = getKeycloakAdminClient(targetRealm).realm(targetRealm).users().search(usernameToSearch);
             // Ensure exact match
             String targetUserId = targetUsers.stream()
                     .filter(u -> u.getUsername().equalsIgnoreCase(usernameToSearch))
                     .map(org.keycloak.representations.idm.UserRepresentation::getId)
                     .findFirst()
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User " + usernameToSearch + " not found in target realm " + targetRealm));
+                    .orElse(null);
+
+            if (targetUserId == null) {
+                log.warn("User {} not found in target realm {}. Client role {} could not be assigned, but local access role was granted.", usernameToSearch, targetRealm, role);
+                return;
+            }
 
             // 2. Find Client UUID in target realm
             String clientUuid = getClientUuid(targetRealm, app.getClientId());
 
             // 3. Find Role
-            RoleRepresentation clientRole = keycloakAdminClient.realm(targetRealm).clients().get(clientUuid).roles().get(role).toRepresentation();
+            RoleRepresentation clientRole = getKeycloakAdminClient(targetRealm).realm(targetRealm).clients().get(clientUuid).roles().get(role).toRepresentation();
 
             // 4. Assign
-            keycloakAdminClient.realm(targetRealm).users().get(targetUserId).roles().clientLevel(clientUuid).add(List.of(clientRole));
+            getKeycloakAdminClient(targetRealm).realm(targetRealm).users().get(targetUserId).roles().clientLevel(clientUuid).add(List.of(clientRole));
 
         } else {
-            // Unlinked App: Existing Logic
-            String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
-            String roleNameUpper = role.toUpperCase();
-            String compositeRoleName = "ROLE_" + appNameUpper + "_" + roleNameUpper;
-            RoleRepresentation roleToAssign = keycloakAdminClient.realm(realm).roles().get(compositeRoleName).toRepresentation();
-            keycloakAdminClient.realm(realm).users().get(user.getProviderUserId()).roles().realmLevel().add(List.of(roleToAssign));
+             log.warn("Attempted to assign role {} to unlinked application {}. Only access roles are supported for unlinked applications.", role, app.getName());
         }
     }
 
@@ -290,6 +356,15 @@ public class ApplicationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        String realm = getRealm();
+        String accessRoleName = getAccessRoleName(app);
+
+        if (role.equals(accessRoleName)) {
+            RoleRepresentation accessRole = keycloakAdminClient.realm(realm).roles().get(accessRoleName).toRepresentation();
+            keycloakAdminClient.realm(realm).users().get(user.getProviderUserId()).roles().realmLevel().remove(List.of(accessRole));
+            return;
+        }
+
         if (app.getClientId() != null && !app.getClientId().isBlank()) {
             // Linked App: Remove Client Role in Target Realm
             String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : realm;
@@ -298,7 +373,7 @@ public class ApplicationService {
             org.keycloak.representations.idm.UserRepresentation portUrlUser = keycloakAdminClient.realm(realm).users().get(portUrlUserId).toRepresentation();
             String usernameToSearch = portUrlUser.getUsername();
 
-            List<org.keycloak.representations.idm.UserRepresentation> targetUsers = keycloakAdminClient.realm(targetRealm).users().search(usernameToSearch);
+            List<org.keycloak.representations.idm.UserRepresentation> targetUsers = getKeycloakAdminClient(targetRealm).realm(targetRealm).users().search(usernameToSearch);
             // Ensure exact match
             String targetUserId = targetUsers.stream()
                     .filter(u -> u.getUsername().equalsIgnoreCase(usernameToSearch))
@@ -314,23 +389,18 @@ public class ApplicationService {
             String clientUuid = getClientUuid(targetRealm, app.getClientId());
 
             try {
-                RoleRepresentation clientRole = keycloakAdminClient.realm(targetRealm).clients().get(clientUuid).roles().get(role).toRepresentation();
-                keycloakAdminClient.realm(targetRealm).users().get(targetUserId).roles().clientLevel(clientUuid).remove(List.of(clientRole));
+                RoleRepresentation clientRole = getKeycloakAdminClient(targetRealm).realm(targetRealm).clients().get(clientUuid).roles().get(role).toRepresentation();
+                getKeycloakAdminClient(targetRealm).realm(targetRealm).users().get(targetUserId).roles().clientLevel(clientUuid).remove(List.of(clientRole));
             } catch (NotFoundException e) {
                 // Role not found, ignore
             }
         } else {
-            // Unlinked App: Existing Logic
-            String appNameUpper = app.getName().toUpperCase().replaceAll("\s+", "_");
-            String roleNameUpper = role.toUpperCase();
-            String compositeRoleName = "ROLE_" + appNameUpper + "_"+ roleNameUpper;
-            RoleRepresentation roleToRemove = keycloakAdminClient.realm(realm).roles().get(compositeRoleName).toRepresentation();
-            keycloakAdminClient.realm(realm).users().get(user.getProviderUserId()).roles().realmLevel().remove(List.of(roleToRemove));
+            log.warn("Attempted to remove role {} from unlinked application {}. Roles are not supported for unlinked applications.", role, app.getName());
         }
     }
 
     private String getClientUuid(String targetRealm, String clientId) {
-        List<org.keycloak.representations.idm.ClientRepresentation> clients = keycloakAdminClient.realm(targetRealm).clients().findByClientId(clientId);
+        List<org.keycloak.representations.idm.ClientRepresentation> clients = getKeycloakAdminClient(targetRealm).realm(targetRealm).clients().findByClientId(clientId);
         if (clients.isEmpty()) {
              throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Client " + clientId + " not found in realm " + targetRealm);
         }
@@ -345,6 +415,8 @@ public class ApplicationService {
 
         List<Application> allApps = applicationRepository.findAll();
 
+        String realm = getRealm();
+
         if (userRoles.contains("ROLE_ADMIN")) {
             return allApps.stream()
                     .map(app -> {
@@ -357,77 +429,12 @@ public class ApplicationService {
         }
 
         // For regular users, we need to check visibility.
-        // Unlinked apps: Check APP_..._ACCESS role (in userRoles)
-        // Linked apps: Check if user has ANY role in the target client/realm.
-
-        // Optimization: Fetch current user's username once if we have linked apps
-        String currentUsername = authentication.getName(); // Usually OIDC sub or preferred_username
-        // If authentication.getName() is the UUID, we might need to look up.
-        // However, usually with OIDC it maps to 'sub'.
-
-        // Optimization: Cache target user IDs per realm to avoid repeated lookups
-        Map<String, String> targetUserIdsCache = new java.util.HashMap<>();
+        // Visibility is ALWAYS checked via the centralized access role in the PortUrl realm.
 
         return allApps.stream()
                 .filter(app -> {
-                    if (app.getClientId() != null && !app.getClientId().isBlank()) {
-                        // Linked App Logic
-                        try {
-                            String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : realm;
-
-                            // We need to check if the user exists in the target realm and has roles for this client.
-                            // We assume the user has the same username.
-
-                            Jwt jwt = (Jwt) authentication.getPrincipal();
-                            String username = jwt.getClaimAsString("preferred_username");
-                            if (username == null) {
-                                return false;
-                            }
-
-                            // If target realm is SAME as PortUrl realm, we can check roles directly from token!
-                            if (targetRealm.equals(realm)) {
-                                Map<String, Object> resourceAccess = jwt.getClaimAsMap("resource_access");
-                                if (resourceAccess != null && resourceAccess.containsKey(app.getClientId())) {
-                                    @SuppressWarnings("unchecked")
-                                    Map<String, Object> clientAccess = (Map<String, Object>) resourceAccess.get(app.getClientId());
-                                    if (clientAccess != null && clientAccess.containsKey("roles")) {
-                                        @SuppressWarnings("unchecked")
-                                        List<String> roles = (List<String>) clientAccess.get("roles");
-                                        return roles != null && !roles.isEmpty();
-                                    }
-                                }
-                                return false;
-                            } else {
-                                // Different Realm: Must querying Keycloak API.
-                                // 1. Find User ID in target realm (with caching)
-                                String targetUserId = targetUserIdsCache.computeIfAbsent(targetRealm, r -> {
-                                    List<org.keycloak.representations.idm.UserRepresentation> users = keycloakAdminClient.realm(r).users().search(username);
-                                    return users.stream()
-                                            .filter(u -> u.getUsername().equalsIgnoreCase(username))
-                                            .map(org.keycloak.representations.idm.UserRepresentation::getId)
-                                            .findFirst()
-                                            .orElse(null);
-                                });
-
-                                if (targetUserId == null) return false;
-
-                                // 2. Get Client UUID (this could also be cached if needed, but Keycloak admin client might handle it)
-                                String clientUuid = getClientUuid(targetRealm, app.getClientId());
-
-                                // 3. Get Roles
-                                // This still calls API per app, but avoids redundant user searches.
-                                List<RoleRepresentation> userClientRoles = keycloakAdminClient.realm(targetRealm).users().get(targetUserId).roles().clientLevel(clientUuid).listAll();
-                                return !userClientRoles.isEmpty();
-                            }
-                        } catch (Exception e) {
-                            // Log and fail closed
-                            return false;
-                        }
-                    } else {
-                        // Unlinked App Logic
-                        String requiredRole = "APP_" + app.getName().toUpperCase().replaceAll("\s+", "_") + "_ACCESS";
-                        return userRoles.contains(requiredRole);
-                    }
+                    String requiredRole = getAccessRoleName(app);
+                    return userRoles.contains(requiredRole);
                 })
                 .map(app -> {
                     org.friesoft.porturl.dto.ApplicationWithRolesDto dto = new org.friesoft.porturl.dto.ApplicationWithRolesDto();
@@ -445,10 +452,39 @@ public class ApplicationService {
         dto.setUrl(app.getUrl());
         dto.setIcon(app.getIcon());
         dto.setIconUrl(app.getIconUrl());
+        dto.setClientId(app.getClientId());
+        dto.setRealm(app.getRealm());
+        dto.setIsLinked(checkClientExists(app));
         if (app.getCategories() != null) {
             dto.setCategories(app.getCategories().stream().map(this::mapCategoryToDtoSimple).collect(Collectors.toList()));
         }
         return dto;
+    }
+
+    private final Map<String, Boolean> clientExistsCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Long> clientExistsCacheTime = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long CACHE_TTL_MS = 60000; // 1 minute
+
+    private boolean checkClientExists(Application app) {
+        if (app.getClientId() == null || app.getClientId().isBlank()) {
+            return false;
+        }
+        String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : getRealm();
+        String cacheKey = targetRealm + ":" + app.getClientId();
+
+        long now = System.currentTimeMillis();
+        if (clientExistsCache.containsKey(cacheKey) && (now - clientExistsCacheTime.get(cacheKey)) < CACHE_TTL_MS) {
+            return clientExistsCache.get(cacheKey);
+        }
+
+        try {
+            boolean exists = !getKeycloakAdminClient(targetRealm).realm(targetRealm).clients().findByClientId(app.getClientId()).isEmpty();
+            clientExistsCache.put(cacheKey, exists);
+            clientExistsCacheTime.put(cacheKey, now);
+            return exists;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private org.friesoft.porturl.dto.Category mapCategoryToDtoSimple(Category category) {
@@ -476,42 +512,26 @@ public class ApplicationService {
             Application app = applicationRepository.findById(applicationId)
                     .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
+            String realm = getRealm();
+
             if (app.getClientId() != null && !app.getClientId().isBlank()) {
                 // Linked App: Fetch Client Roles
                 String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : realm;
                 try {
                     String clientUuid = getClientUuid(targetRealm, app.getClientId());
-                    return keycloakAdminClient.realm(targetRealm).clients().get(clientUuid).roles().list().stream()
+                    return getKeycloakAdminClient(targetRealm).realm(targetRealm).clients().get(clientUuid).roles().list().stream()
                             .map(RoleRepresentation::getName)
+                            .filter(name -> !name.equals(getAccessRoleName(app))) // Exclude access role
                             .collect(Collectors.toList());
                 } catch (Exception e) {
-                    // Log error?
+                    log.warn("Could not fetch roles for linked application {} in realm {}: {}", app.getName(), targetRealm, e.getMessage());
                     return List.of();
                 }
             } else {
-                // Unlinked App
-                List<RoleRepresentation> allRealmRoles = getAllRealmRoles();
-                String appPrefix = "ROLE_" + app.getName().toUpperCase().replaceAll("\\s+", "_") + "_";
-                return allRealmRoles.stream()
-                        .map(RoleRepresentation::getName)
-                        .filter(name -> name.startsWith(appPrefix))
-                        .map(name -> name.substring(appPrefix.length()).toLowerCase())
-                        .collect(Collectors.toList());
+                // Unlinked App: only access role which is not in this list.
+                return List.of();
             }
         }
-
-        public List<RoleRepresentation> getAllRealmRoles() {
-        List<RoleRepresentation> allRoles = new ArrayList<>();
-        int first = 0;
-        int max = 100;
-        List<RoleRepresentation> page;
-        do {
-            page = keycloakAdminClient.realm(realm).roles().list(first, max);
-            allRoles.addAll(page);
-            first += max;
-        } while (page.size() == max);
-        return allRoles;
-    }
 
     public void enforceApplicationSortOrder(Category category) {
         if (category.getApplicationSortMode() == Category.SortMode.ALPHABETICAL && category.getApplications() != null) {
@@ -526,5 +546,3 @@ public class ApplicationService {
         }
     }
 }
-
-    

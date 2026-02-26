@@ -1,6 +1,7 @@
 package org.friesoft.porturl.service;
 
 import jakarta.persistence.EntityManager;
+import org.friesoft.porturl.config.PorturlProperties;
 import org.friesoft.porturl.dto.ApplicationCreateRequest;
 import org.friesoft.porturl.dto.ApplicationWithRolesDto;
 import org.friesoft.porturl.entities.Application;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.*;
 import org.keycloak.representations.idm.RoleRepresentation;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,7 +24,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -53,6 +54,9 @@ class ApplicationServiceTest {
     @Mock
     private EntityManager entityManager;
 
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private PorturlProperties properties;
+
     // Mocks for the Keycloak client fluent API chain
     @Mock
     private RealmsResource realmsResource;
@@ -76,10 +80,11 @@ class ApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(applicationService, "realm", "test-realm");
+        lenient().when(properties.getKeycloak().getAdmin().getRealm()).thenReturn("test-realm");
 
         lenient().when(keycloakAdminClient.realm("test-realm")).thenReturn(realmResource);
         lenient().when(realmResource.roles()).thenReturn(rolesResource);
+        lenient().when(rolesResource.list(anyInt(), anyInt())).thenReturn(Collections.emptyList());
         lenient().when(realmResource.users()).thenReturn(usersResource);
         lenient().when(usersResource.get(anyString())).thenReturn(userResource);
         lenient().when(userResource.roles()).thenReturn(roleMappingResource);
@@ -102,11 +107,12 @@ class ApplicationServiceTest {
         Application app1 = new Application();
         app1.setName("Grafana");
         app1.setId(1L);
-        when(applicationRepository.findAll()).thenReturn(List.of(app1));
+        lenient().when(applicationRepository.findAll()).thenReturn(List.of(app1));
+        lenient().when(applicationRepository.findById(1L)).thenReturn(Optional.of(app1));
 
         RoleRepresentation role1 = new RoleRepresentation("ROLE_GRAFANA_ADMIN", "", false);
         RoleRepresentation role2 = new RoleRepresentation("ROLE_GRAFANA_VIEWER", "", false);
-        when(rolesResource.list()).thenReturn(List.of(role1, role2));
+        lenient().when(rolesResource.list(0, 100)).thenReturn(List.of(role1, role2));
 
         // Act
         List<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser();
@@ -128,7 +134,7 @@ class ApplicationServiceTest {
         Application app2 = new Application();
         app2.setName("Other App");
         app2.setId(2L);
-        when(applicationRepository.findAll()).thenReturn(List.of(app1, app2));
+        lenient().when(applicationRepository.findAll()).thenReturn(List.of(app1, app2));
 
         // Act
         List<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser();

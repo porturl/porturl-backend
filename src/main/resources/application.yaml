@@ -2,6 +2,7 @@
 porturl:
   security:
     enabled: true
+    validate-issuer: ${PORTURL_SECURITY_VALIDATE_ISSUER:true}
   cors:
     allowed-origins:
       - http://localhost:4200
@@ -19,6 +20,18 @@ porturl:
     enabled: false
     # A cron expression for when the task should run. Default is 3 AM daily.
     cron: "0 0 3 * * ?"
+  keycloak:
+    realm: ${PORTURL_KEYCLOAK_REALM:}
+    admin:
+      server-url: ${PORTURL_KEYCLOAK_ADMIN_SERVER_URL:}
+      realm: ${PORTURL_KEYCLOAK_ADMIN_REALM:}
+      client-id: ${PORTURL_KEYCLOAK_ADMIN_CLIENT_ID:}
+      client-secret: ${PORTURL_KEYCLOAK_ADMIN_CLIENT_SECRET:}
+    cross-realm:
+      server-url: ${PORTURL_KEYCLOAK_CROSSREALM_SERVER_URL:}
+      realm: ${PORTURL_KEYCLOAK_CROSSREALM_REALM:}
+      client-id: ${PORTURL_KEYCLOAK_CROSSREALM_CLIENT_ID:}
+      client-secret: ${PORTURL_KEYCLOAK_CROSSREALM_CLIENT_SECRET:}
 info:
   auth:
     issuer-uri: "${spring.security.oauth2.resourceserver.jwt.issuer-uri}"
@@ -87,4 +100,4 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://sso.yourdomain.com/auth/realms/<yourrealm>
+          issuer-uri: ${PORTURL_KEYCLOAK_ISSUER_URI:https://sso.yourdomain.com/auth/realms/yourrealm}

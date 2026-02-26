@@ -2,6 +2,7 @@ package org.friesoft.porturl.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import java.util.Arrays;
 import java.util.List;
@@ -15,6 +16,9 @@ public class PorturlProperties {
     private final Otel otel = new Otel();
     private Storage storage = new Storage();
     private CleanupProperties cleanup = new CleanupProperties();
+    
+    @NestedConfigurationProperty
+    private Keycloak keycloak = new Keycloak();
 
     @Data
     public static class Cors {
@@ -29,6 +33,7 @@ public class PorturlProperties {
     @Data
     public static class Security {
         private boolean enabled = true;
+        private boolean validateIssuer = true;
     }
 
     @Data
@@ -47,5 +52,26 @@ public class PorturlProperties {
     public static class CleanupProperties {
         private boolean enabled = true;
         private String cron = "0 0 3 * * ?"; // Defaults to 3 AM every day
+    }
+
+    @Data
+    public static class Keycloak {
+        private String realm;
+        private String truststorePath;
+        private String truststorePassword = "changeit";
+
+        @NestedConfigurationProperty
+        private Admin admin = new Admin();
+
+        @NestedConfigurationProperty
+        private Admin crossRealm = new Admin();
+
+        @Data
+        public static class Admin {
+            private String serverUrl;
+            private String realm;
+            private String clientId;
+            private String clientSecret;
+        }
     }
 }
