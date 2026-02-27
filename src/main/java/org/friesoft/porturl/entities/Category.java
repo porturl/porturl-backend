@@ -32,7 +32,7 @@ public class Category {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private SortMode applicationSortMode = SortMode.CUSTOM;
+    private SortMode applicationSortMode = SortMode.ALPHABETICAL;
 
     /**
      * An optional description for the category, which can be displayed as a tooltip.

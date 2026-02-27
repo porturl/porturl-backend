@@ -1,0 +1,1 @@
+ALTER TABLE category ALTER COLUMN application_sort_mode SET DEFAULT 'ALPHABETICAL';
