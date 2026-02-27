@@ -49,7 +49,7 @@ public class ImageCleanupService {
             return;
         }
 
-        logger.info("Starting orphaned image cleanup task...");
+        logger.debug("Starting orphaned image cleanup task...");
 
         // 1. Get all active image identifiers from the database
         Set<String> activeImageFiles = new HashSet<>();
@@ -73,10 +73,10 @@ public class ImageCleanupService {
                 if (!activeImageFiles.contains(filename)) {
                     try {
                         fileStorageService.delete(filename);
-                        logger.info("Deleted orphaned image file: {}", filename);
+                        logger.debug("Deleted orphaned image file: {}", filename);
                         deletedCount.getAndIncrement();
                     } catch (IOException e) {
-                        logger.error("Failed to delete orphaned file: {}", filename, e);
+                        logger.debug("Failed to delete orphaned file: {}", filename, e);
                     }
                 }
             });
@@ -84,6 +84,6 @@ public class ImageCleanupService {
             logger.error("Failed to read stored files for cleanup.", e);
         }
 
-        logger.info("Orphaned image cleanup task finished. Deleted {} files.", deletedCount);
+        logger.debug("Orphaned image cleanup task finished. Deleted {} files.", deletedCount);
     }
 }
