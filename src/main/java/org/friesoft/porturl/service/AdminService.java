@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.keycloak.representations.idm.RealmRepresentation;
 
 @Service
 @Slf4j
@@ -96,8 +97,21 @@ public class AdminService {
             realmToUse = properties.getKeycloak().getAdmin().getRealm();
         }
 
+        Set<String> internalClientIds = new HashSet<>(Arrays.asList(
+            "account", "account-console", "admin-cli", "broker", "realm-management", "security-admin-console"
+        ));
+        
+        // Add PortUrl's own admin clients to the ignore list
+        if (properties.getKeycloak().getAdmin().getClientId() != null) {
+            internalClientIds.add(properties.getKeycloak().getAdmin().getClientId());
+        }
+        if (properties.getKeycloak().getCrossRealm().getClientId() != null) {
+            internalClientIds.add(properties.getKeycloak().getCrossRealm().getClientId());
+        }
+
         try {
             return applicationService.getKeycloakAdminClient(realmToUse).realm(realmToUse).clients().findAll().stream()
+                    .filter(client -> !internalClientIds.contains(client.getClientId()))
                     .map(client -> {
                         org.friesoft.porturl.dto.KeycloakClientDto dto = new org.friesoft.porturl.dto.KeycloakClientDto();
                         dto.setId(client.getId());
@@ -109,6 +123,20 @@ public class AdminService {
         } catch (Exception e) {
             log.error("Failed to scan clients in realm {}", realmToUse, e);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not scan realm: " + e.getMessage());
+        }
+    }
+
+    public List<String> listRealms() {
+        try {
+            // Using "master" or any non-local realm name will return the masterKeycloakAdminClient
+            // which has permissions to list all realms if configured correctly.
+            return applicationService.getKeycloakAdminClient("master").realms().findAll().stream()
+                    .map(RealmRepresentation::getRealm)
+                    .filter(name -> !name.equalsIgnoreCase("master"))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Failed to list realms", e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not list realms: " + e.getMessage());
         }
     }
 
