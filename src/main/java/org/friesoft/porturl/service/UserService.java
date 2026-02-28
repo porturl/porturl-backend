@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +33,8 @@ public class UserService {
     private final Keycloak masterKeycloakAdminClient;
     private final PorturlProperties properties;
 
+    private static final Set<String> INTERNAL_ROLES = Set.of("uma_authorization", "offline_access", "FACTOR_BEARER");
+
     public UserService(UserRepository userRepository,
                        ApplicationRepository applicationRepository,
                        @org.springframework.beans.factory.annotation.Qualifier("keycloakAdmin") Keycloak keycloakAdminClient,
@@ -42,6 +45,12 @@ public class UserService {
         this.keycloakAdminClient = keycloakAdminClient;
         this.masterKeycloakAdminClient = masterKeycloakAdminClient;
         this.properties = properties;
+    }
+
+    private List<String> filterInternalRoles(Collection<String> roles) {
+        return roles.stream()
+                .filter(r -> !INTERNAL_ROLES.contains(r) && !r.startsWith("default-roles-"))
+                .collect(Collectors.toList());
     }
 
     private Keycloak getKeycloakAdminClient(String targetRealm) {
@@ -59,7 +68,12 @@ public class UserService {
     public Collection<? extends GrantedAuthority> getCurrentUserRoles() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
-            return authentication.getAuthorities();
+            List<String> roles = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
+            return filterInternalRoles(roles).stream()
+                    .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
         }
         return Collections.emptyList();
     }
@@ -116,10 +130,6 @@ public class UserService {
 
         applicationRepository.findAll().stream()
                 .forEach(app -> {
-                    String accessRoleName = getAccessRoleName(app);
-                    // Ensure access role is in the list if user has it
-                    // (It should already be there from step 1 if it's a realm role, but we can verify/format if needed)
-
                     if (app.getClientId() != null && !app.getClientId().isBlank()) {
                         try {
                             String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : realm;
@@ -146,9 +156,8 @@ public class UserService {
                             // Log and ignore
                         }
                     }
-                    // For unlinked apps, roles are already in userRoles (with ROLE_ prefix)
                 });
 
-        return userRoles;
+        return filterInternalRoles(userRoles);
     }
 }
