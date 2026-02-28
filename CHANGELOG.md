@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.0](https://github.com/porturl/porturl-backend/compare/v0.11.0...v0.12.0) (2026-02-28)
+
+
+### Features
+
+* add build information ([5898a85](https://github.com/porturl/porturl-backend/commit/5898a859e4923aaa184ea16f7dfcf6ab7fd8f1bc))
+* filter roles (hide keycloak internal) ([1198d98](https://github.com/porturl/porturl-backend/commit/1198d982ca2c075a38dac80b5e8592f1aa640b2f))
+
 ## [0.11.0](https://github.com/porturl/porturl-backend/compare/v0.10.0...v0.11.0) (2026-02-28)
 
 
