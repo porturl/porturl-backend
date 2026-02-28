@@ -82,6 +82,9 @@ repositories {
 dependencies {
     implementation(platform(libs.spring.cloud.bom))
     implementation(libs.bundles.spring.starters)
+    implementation(libs.spring.boot.starter.cache)
+    implementation(libs.spring.session.core)
+    implementation(libs.caffeine)
     implementation(libs.spring.boot.starter.aspectj)
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.spring.boot.starter.opentelemetry)

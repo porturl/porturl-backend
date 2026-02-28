@@ -1,24 +1,76 @@
 package org.friesoft.porturl.controller;
 
 import org.friesoft.porturl.api.UserApi;
+import org.friesoft.porturl.dto.CreateAuthTicket200Response;
 import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.service.UserService;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
 public class UserController implements UserApi {
 
     private final UserService userService;
+    private final CacheManager cacheManager;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, CacheManager cacheManager) {
         this.userService = userService;
+        this.cacheManager = cacheManager;
+    }
+
+    @Override
+    public ResponseEntity<CreateAuthTicket200Response> createAuthTicket() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID ticket = UUID.randomUUID();
+        Cache cache = cacheManager.getCache("authTickets");
+        if (cache != null) {
+            cache.put(ticket.toString(), authentication);
+        }
+        CreateAuthTicket200Response response = new CreateAuthTicket200Response();
+        response.setTicket(ticket);
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    public ResponseEntity<Void> bridgeAuth(UUID ticket, URI next) {
+        Cache cache = cacheManager.getCache("authTickets");
+        if (cache != null) {
+            Authentication authentication = cache.get(ticket.toString(), Authentication.class);
+            if (authentication != null) {
+                ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+                HttpServletRequest request = attr.getRequest();
+                
+                HttpSession session = request.getSession(true);
+                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+                securityContext.setAuthentication(authentication);
+                session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
+                cache.evict(ticket.toString());
+            }
+        }
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(next);
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
     @Override

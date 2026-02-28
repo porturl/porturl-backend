@@ -174,6 +174,8 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
                     .requestMatchers("/v3/api-docs*/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/otlp/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/images/**").permitAll()
+                    .requestMatchers("/auth/bridge").permitAll()
+                    .requestMatchers("/api/auth/ticket").authenticated()
                     .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated())
                         .oauth2ResourceServer((oauth2) -> oauth2
