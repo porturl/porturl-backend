@@ -1,165 +1,132 @@
 # Keycloak Setup for PortUrl
 
-This guide describes how to manually configure an existing Keycloak installation to work with PortUrl.
-
-PortUrl uses a dual-client architecture:
-1.  **PortUrl Realm**: A dedicated realm for PortUrl's own users and application-specific roles.
-2.  **Master Realm (Cross-Realm)**: Used only for managing users and roles in *other* realms (e.g., if you want to link an app from a "Production" realm to PortUrl).
-
----
+This guide describes how to configure Keycloak for PortUrl. It focuses on the **Identity Brokering** strategy, which allows you to keep your users in their existing realms while using PortUrl for centralized access management.
 
 ## 1. The PortUrl Realm (`porturl`)
 
-Create a new realm named `porturl` (or your preferred name).
+Create a dedicated realm for PortUrl. This realm acts as an "Aggregator" and "Management Layer."
 
 ### Step 1.1: Create the Management Client
-This client allows the backend to manage roles and users within the PortUrl realm.
+Allows the backend to manage roles and user assignments within the PortUrl realm.
 
-1.  Navigate to **Clients** -> **Create client**.
-2.  **Client ID**: `porturl-management-client`
-3.  **Name**: `PortUrl Local Management`
-4.  **Client authentication**: `On`
-5.  **Authorization**: `Off`
-6.  **Authentication flow**: Uncheck everything except **Service accounts roles**.
-7.  Click **Save**.
-
-**Assign Permissions:**
-1.  Go to the **Service account roles** tab for this client.
-2.  Click **Assign role**.
-3.  Filter by client and search for `realm-management`.
-4.  Assign the `realm-admin` role from the `realm-management` client.
-
-**Obtain Secret:**
-1.  Go to the **Credentials** tab and copy the **Client secret**.
+1.  **Client ID**: `porturl-management-client`
+2.  **Client authentication**: `On`
+3.  **Authentication flow**: **Service accounts roles** only.
+4.  **Permissions**: Assign `realm-admin` from the `realm-management` client in the **Service account roles** tab.
 
 ### Step 1.2: Create the Android App Client (Public)
 1.  **Client ID**: `porturl-android`
-2.  **Name**: `PortUrl Android App`
-3.  **Client authentication**: `Off` (Public)
-4.  **Standard flow**: `On`
-5.  **PKCE Challenge Method**: `S256` (Recommended)
-6.  **Valid Redirect URIs**: `org.friesoft.porturl:/*` and `http://localhost:*`
-7.  **Web Origins**: `*`
-
-### Step 1.3: Create the Swagger UI Client (Public)
-This client is used by the Swagger UI to authenticate for testing API endpoints.
-
-1.  **Client ID**: `porturl-backend-swagger-client`
-2.  **Name**: `Swagger UI`
-3.  **Client authentication**: `Off` (Public)
-4.  **Standard flow**: `On`
-5.  **PKCE Challenge Method**: `S256`
-6.  **Valid Redirect URIs**: `http://localhost:8080/swagger-ui/oauth2-redirect.html` (or your backend's Swagger redirect URL)
-7.  **Web Origins**: `*`
-
-### Step 1.4: Define the Administrator Role
-1.  Go to **Realm Roles** -> **Create role**.
-2.  **Role Name**: `ROLE_ADMIN`
-3.  Assign this role to any user who should be a PortUrl Administrator.
+2.  **Client authentication**: `Off` (Public)
+3.  **Standard flow**: `On`
+4.  **PKCE Challenge Method**: `S256`
+5.  **Valid Redirect URIs**: `org.friesoft.porturl:/*`
 
 ---
 
 ## 2. Cross-Realm Management (Master Realm)
 
-If you plan to link applications from realms other than the PortUrl realm, you need a management client in the `master` realm.
+Required if you want to manage roles in realms other than the PortUrl realm.
 
 1.  Switch to the `master` realm.
-2.  Navigate to **Clients** -> **Create client**.
-3.  **Client ID**: `porturl-cross-realm-client`
-4.  **Client authentication**: `On`
-5.  **Authentication flow**: **Service accounts roles** only.
-6.  Click **Save**.
-
-**Assign Permissions:**
-1.  Go to the **Service account roles** tab.
-2.  Click **Assign role**.
-3.  Search for `admin`.
-4.  Assign the `admin` role (this is a realm role in `master` that allows managing ALL realms).
-
-**Obtain Secret:**
-1.  Go to the **Credentials** tab and copy the **Client secret**.
+2.  **Client ID**: `porturl-cross-realm-client`
+3.  **Client authentication**: `On`
+4.  **Authentication flow**: **Service accounts roles** only.
+5.  **Permissions**: Assign the `admin` role in the **Service account roles** tab.
 
 ---
 
-## 3. Backend Configuration
+## 3. Identity Brokering (SSO with Existing Realms)
 
-Update your `application.yaml` (or environment variables) with the secrets and URLs obtained above:
+This setup allows users to log into PortUrl using accounts from your existing "Production" or "Main" realm.
+
+### Step 3.1: Configure the Existing Realm (The Identity Provider)
+In your **Existing Realm** (where your users are):
+
+1.  Create a new client: `porturl-broker-client`.
+2.  **Client authentication**: `On`.
+3.  **Standard flow**: `On`.
+4.  **Valid Redirect URIs**: `https://<your-keycloak>/realms/porturl/broker/<idp-alias>/endpoint`.
+
+### Step 3.2: Configure the PortUrl Realm (The Service Provider)
+In the **PortUrl Realm**:
+
+1.  Go to **Identity Providers** -> **Add provider** -> **Keycloak OpenID Connect**.
+2.  **Alias**: (e.g., `production-idp`).
+3.  **Endpoints**: Import from `<keycloak-url>/realms/<existing-realm>/.well-known/openid-configuration`.
+4.  **Client ID**: `porturl-broker-client`.
+5.  **Client Secret**: (From Step 3.1).
+6.  **Mappers**: Go to the **Mappers** tab of your new provider and click **Add mapper**:
+    *   **Name**: `username-importer`
+    *   **Sync mode override**: `Inherit`
+    *   **Mapper Type**: `Username Template Importer`
+    *   **Template**: `${CLAIM.preferred_username}`
+    *   **Target**: `LOCAL`
+    *   *This ensures that the user's username in PortUrl exactly matches their username in the source realm, which is critical for cross-realm role assignment.*
+
+### Step 3.3: Seamless Redirect (Optional)
+To skip the PortUrl login screen and go straight to your existing realm's login:
+
+1.  In **PortUrl Realm** -> **Authentication** -> **Browser** flow.
+2.  Configure **Identity Provider Redirector**.
+3.  **Default Identity Provider**: `<idp-alias>` (from Step 3.2).
+
+---
+
+## 4. Session & Timeout Strategy
+
+To achieve a long-lived app session while maintaining security for individual services, configure different timeouts for your realms.
+
+### Step 4.1: PortUrl Realm (Long Session)
+This session keeps the Android app logged in and acts as the "Source" for silent SSO.
+1.  Go to **Realm Settings** -> **Sessions**.
+    *   **SSO Session Idle**: `180 Days`.
+    *   **SSO Session Max**: `180 Days`.
+    *   **Offline Session Idle/Max**: `180 Days`.
+2.  Go to **Realm Settings** -> **Tokens**.
+    *   **Revoke Refresh Token**: `On`.
+    *   **Refresh Token Max Reuse**: `1` (Provides a tiny grace period to prevent App/Browser race conditions).
+    *   *Note: Ensure the `porturl-android` client settings do not override these with shorter values.*
+
+### Step 4.2: Target Realms (Short Session)
+These are the realms where your actual services (Grafana, etc.) live.
+1.  Go to **Realm Settings** -> **Sessions**.
+2.  **SSO Session Idle**: `30 Minutes` (or your preferred short duration).
+3.  **SSO Session Max**: `30 Minutes`.
+
+### How it works together:
+*   The PortUrl Android app uses **standard (non-ephemeral) Custom Tabs** to share cookies with the system browser.
+*   When you open an app from PortUrl, the browser uses the 6-month cookie from the PortUrl realm to silently authorize a new 30-minute session in the target realm.
+*   If you access the service directly in a browser, you will be prompted for a login once the 30-minute session expires (unless you have an active 6-month PortUrl session and "Seamless Redirect" enabled).
+
+---
+
+## 5. Backend Configuration
 
 ```yaml
 porturl:
   keycloak:
-    realm: porturl  # Your PortUrl realm name
+    realm: porturl
     admin:
       server-url: https://your-keycloak:8443
       realm: porturl
       client-id: porturl-management-client
-      client-secret: <PORTURL_REALM_CLIENT_SECRET>
+      client-secret: <SECRET>
     cross-realm:
       server-url: https://your-keycloak:8443
       realm: master
       client-id: porturl-cross-realm-client
-      client-secret: <MASTER_REALM_CLIENT_SECRET>
-
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: https://your-keycloak:8443/realms/porturl
+      client-secret: <SECRET>
 ```
-
-### Environment Variables Equivalent:
-- `PORTURL_KEYCLOAK_REALM`
-- `PORTURL_KEYCLOAK_ADMIN_SERVER_URL`
-- `PORTURL_KEYCLOAK_ADMIN_REALM`
-- `PORTURL_KEYCLOAK_ADMIN_CLIENT_ID`
-- `PORTURL_KEYCLOAK_ADMIN_CLIENT_SECRET`
-- `PORTURL_KEYCLOAK_CROSS_REALM_SERVER_URL`
-- `PORTURL_KEYCLOAK_CROSS_REALM_REALM`
-- `PORTURL_KEYCLOAK_CROSS_REALM_CLIENT_ID`
-- `PORTURL_KEYCLOAK_CROSS_REALM_CLIENT_SECRET`
-- `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI`
 
 ---
 
-## 4. Multi-Realm Single Sign-On (SSO)
+## 6. How Roles Work
 
-To allow seamless SSO between the PortUrl realm and other application realms (e.g., a "Production" realm), configure **Identity Brokering**.
+PortUrl manages two types of roles:
+1.  **Access Roles**: Created in the `porturl` realm (e.g., `ROLE_APP_ACCESS`). These determine if the app shows up in the Android app.
+2.  **Client Roles**: Assigned in the **Target Realm** (where the app actually resides). 
 
-### Step 4.1: Configure PortUrl Realm (The Identity Provider)
-1.  In the **PortUrl Realm**, create a new client.
-2.  **Client ID**: `porturl-broker`
-3.  **Client authentication**: `On`
-4.  **Valid Redirect URIs**: `https://<your-keycloak>/realms/*/broker/porturl-idp/endpoint` (using a wildcard allows multiple realms).
-5.  Save and copy the **Client Secret** from the **Credentials** tab.
-
-### Step 4.2: Configure the Target Realm (The Service Provider)
-1.  Switch to the **Target Realm** (where your app resides).
-2.  Go to **Identity Providers** -> **Add provider** -> **Keycloak OpenID Connect**.
-3.  **Alias**: `porturl-idp`
-4.  **Display Name**: `PortUrl Login`
-5.  **Endpoints**: Use "Import from URL" with `https://<your-keycloak>/realms/porturl/.well-known/openid-configuration`.
-6.  **Client ID**: `porturl-broker`
-7.  **Client Secret**: (The secret from Step 4.1).
-8.  Set **Sync Mode** to `Import` or `Force`.
-9.  Click **Save**.
-
-### Step 4.3: Ensure Username Consistency
-1.  In the **Target Realm**, go to the **Mappers** tab of the newly created `porturl-idp`.
-2.  Click **Add mapper**.
-3.  **Name**: `username-importer`
-4.  **Mapper Type**: `Username Template Importer`
-5.  **Template**: `${CLAIM.preferred_username}`
-6.  **Target**: `LOCAL`
-7.  Click **Save**. *This ensures PortUrl can find the user by username to assign roles.*
-
-### Step 4.4: Enable Seamless Redirect (Skip Login Screen)
-1.  In the **Target Realm**, go to **Authentication**.
-2.  Select the **Browser** flow (or create a copy).
-3.  Find the **Identity Provider Redirector** execution.
-4.  Click the **Config** icon (gear).
-5.  **Alias**: `porturl-redirect`
-6.  **Default Identity Provider**: `porturl-idp`
-7.  Click **Save**.
-8.  Ensure the **Identity Provider Redirector** is set to `ALTERNATIVE` and has a higher priority than the forms (or just set it as the first step).
-
+When you assign a role to a user in PortUrl, the backend:
+1.  Finds the user's **username** in the `porturl` realm.
+2.  Searches for the **same username** in the target realm.
+3.  Assigns the specific client role (e.g., `admin` in Grafana) to that user in the target realm.
