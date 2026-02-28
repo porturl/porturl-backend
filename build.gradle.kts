@@ -14,6 +14,10 @@ plugins {
     jacoco
 }
 
+springBoot {
+    buildInfo()
+}
+
 openApiGenerate {
     generatorName.set("spring")
     inputSpec.set("$projectDir/src/main/resources/openapi.yaml")
