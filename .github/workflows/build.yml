@@ -38,7 +38,7 @@ jobs:
         run: ./gradlew test jacocoTestReport
 
       - name: Upload test results and coverage
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
@@ -126,14 +126,14 @@ jobs:
           echo "Version: $version"
 
       - name: Upload JAR artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: jar-artifact
           path: build/libs/${{ steps.build_info.outputs.JAR_NAME }}
           retention-days: 7
 
       - name: Upload Native executable
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: native-executable
           path: build/native/nativeCompile/${{ steps.build_info.outputs.NATIVE_NAME }}
@@ -306,7 +306,7 @@ jobs:
 
       - name: Upload build reports (on failure)
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-reports-snapshot-${{ github.sha }}
           path: |
