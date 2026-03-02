@@ -17,7 +17,7 @@ logbackAccess = "2.0.12"
 logbackContrib = "0.1.5"
 logstashEncoder = "9.0"
 otelLogbackAppender = "2.25.0-alpha"
-otelExporter = "1.55.0"
+otelExporter = "1.59.0"
 h2 = "2.4.240"
 
 keycloak = "26.0.8"
