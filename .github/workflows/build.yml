@@ -149,13 +149,13 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download Native executable
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: native-executable
           path: build/native/nativeCompile/
 
       - name: Download JAR artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: jar-artifact
           path: build/libs/
@@ -241,13 +241,13 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download JAR artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: jar-artifact
           path: build/libs/
 
       - name: Download Native executable
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: native-executable
           path: build/native/nativeCompile/
