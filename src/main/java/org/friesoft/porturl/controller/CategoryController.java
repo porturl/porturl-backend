@@ -49,7 +49,14 @@ public class CategoryController implements CategoryApi {
         try {
             Category category = new Category();
             category.setName(categoryDto.getName());
-            category.setSortOrder(categoryDto.getSortOrder());
+            
+            if (categoryDto.getSortOrder() != null) {
+                category.setSortOrder(categoryDto.getSortOrder());
+            } else {
+                Integer maxOrder = repository.findMaxSortOrder();
+                category.setSortOrder(maxOrder != null ? maxOrder + 1 : 0);
+            }
+            
             if (categoryDto.getApplicationSortMode() != null) {
                 category.setApplicationSortMode(Category.SortMode.valueOf(categoryDto.getApplicationSortMode().getValue()));
             }
@@ -67,7 +74,9 @@ public class CategoryController implements CategoryApi {
         return repository.findById(id)
                 .map(category -> {
                     category.setName(updatedCategoryDto.getName());
-                    category.setSortOrder(updatedCategoryDto.getSortOrder());
+                    if (updatedCategoryDto.getSortOrder() != null) {
+                        category.setSortOrder(updatedCategoryDto.getSortOrder());
+                    }
                     if (updatedCategoryDto.getApplicationSortMode() != null) {
                         category.setApplicationSortMode(Category.SortMode.valueOf(updatedCategoryDto.getApplicationSortMode().getValue()));
                         applicationService.enforceApplicationSortOrder(category);

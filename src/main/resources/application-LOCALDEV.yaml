@@ -1,9 +1,7 @@
 ---
 logging:
   level:
-    org.keycloak.admin.client: DEBUG
     org.friesoft.porturl: DEBUG
-
 spring:
   security:
     oauth2:
@@ -11,6 +9,8 @@ spring:
         jwt:
           issuer-uri: https://localhost:8443/realms/porturl-local
 porturl:
+  cors:
+    allowed-origins: http://localhost:5173
   security:
     validate-issuer: false
   cleanup:

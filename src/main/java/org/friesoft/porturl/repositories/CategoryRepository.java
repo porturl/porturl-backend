@@ -23,4 +23,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
      */
     @Query("SELECT DISTINCT c FROM Category c JOIN c.applications a WHERE a IN :applications ORDER BY c.sortOrder ASC")
     List<Category> findDistinctByApplicationInOrderBySortOrderAsc(@Param("applications") java.util.Collection<Application> applications);
+
+    @Query("SELECT MAX(c.sortOrder) FROM Category c")
+    Integer findMaxSortOrder();
 }

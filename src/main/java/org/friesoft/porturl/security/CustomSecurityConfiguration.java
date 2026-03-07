@@ -1,12 +1,16 @@
 package org.friesoft.porturl.security;
 
 import org.friesoft.porturl.config.PorturlProperties;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.NullMarked;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.http.converter.autoconfigure.ServerHttpMessageConvertersCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.AbstractHttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,12 +30,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.HttpInputMessage;
-import org.springframework.http.HttpOutputMessage;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.MediaType;
+import tools.jackson.databind.json.JsonMapper;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -60,44 +61,78 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
         this.authoritiesExtractor = authoritiesExtractor;
     }
 
-    public static class YamlHttpMessageConverter implements HttpMessageConverter<Object> {
+    public static class YamlHttpMessageConverter extends AbstractHttpMessageConverter<Object> {
         private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
-        private final List<MediaType> supportedMediaTypes = List.of(new MediaType("application", "x-yaml"));
 
-        @Override
-        public boolean canRead(@NonNull Class<?> clazz, MediaType mediaType) {
-            return supportedMediaTypes.getFirst().isCompatibleWith(mediaType);
+        public YamlHttpMessageConverter() {
+            super(new MediaType("application", "x-yaml"), new MediaType("application", "yaml"));
         }
 
         @Override
-        public boolean canWrite(@NonNull Class<?> clazz, MediaType mediaType) {
-            return supportedMediaTypes.getFirst().isCompatibleWith(mediaType);
+        protected boolean supports(Class<?> clazz) {
+            return true;
         }
 
         @Override
-        @NullMarked
-        public List<MediaType> getSupportedMediaTypes() {
-            return supportedMediaTypes;
-        }
-
-        @Override
-        public Object read(@NonNull Class<?> clazz, HttpInputMessage inputMessage) throws IOException {
+        protected Object readInternal(Class<?> clazz, HttpInputMessage inputMessage) throws IOException {
             return yamlMapper.readValue(inputMessage.getBody(), clazz);
         }
 
         @Override
-        public void write(Object o, MediaType contentType, HttpOutputMessage outputMessage) throws IOException {
+        protected void writeInternal(Object o, HttpOutputMessage outputMessage) throws IOException {
             yamlMapper.writeValue(outputMessage.getBody(), o);
         }
     }
+@Bean
+public YamlHttpMessageConverter yamlHttpMessageConverter() {
+    return new YamlHttpMessageConverter();
+}
 
-    @Bean
-    public YamlHttpMessageConverter yamlHttpMessageConverter() {
-        return new YamlHttpMessageConverter();
-    }
+@Bean
+ServerHttpMessageConvertersCustomizer jackson3HttpMessageConverter(JsonMapper jsonMapper) {
+    return builder -> builder.withJsonConverter(
+            new JacksonJsonHttpMessageConverter(jsonMapper.rebuild()
+                    .build())
+        );
+}
 
-    @Bean
-    public JwtDecoder jwtDecoder() {
+@Bean
+public org.springframework.boot.web.servlet.FilterRegistrationBean<org.springframework.web.filter.OncePerRequestFilter> openApiAcceptHeaderFilter() {
+    org.springframework.boot.web.servlet.FilterRegistrationBean<org.springframework.web.filter.OncePerRequestFilter> registrationBean = new org.springframework.boot.web.servlet.FilterRegistrationBean<>();
+    registrationBean.setFilter(new org.springframework.web.filter.OncePerRequestFilter() {
+        @Override
+        protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response, jakarta.servlet.FilterChain filterChain)
+                throws jakarta.servlet.ServletException, java.io.IOException {
+            if (request.getRequestURI().contains("/v3/api-docs")) {
+                jakarta.servlet.http.HttpServletRequest wrapper = new jakarta.servlet.http.HttpServletRequestWrapper(request) {
+                    @Override
+                    public String getHeader(String name) {
+                        if ("Accept".equalsIgnoreCase(name)) {
+                            return "application/json";
+                        }
+                        return super.getHeader(name);
+                    }
+
+                    @Override
+                    public java.util.Enumeration<String> getHeaders(String name) {
+                        if ("Accept".equalsIgnoreCase(name)) {
+                            return java.util.Collections.enumeration(java.util.Collections.singletonList("application/json"));
+                        }
+                        return super.getHeaders(name);
+                    }
+                };
+                filterChain.doFilter(wrapper, response);
+            } else {
+                filterChain.doFilter(request, response);
+            }
+        }
+    });
+    registrationBean.setOrder(org.springframework.core.Ordered.HIGHEST_PRECEDENCE);
+    return registrationBean;
+}
+
+@Bean
+public JwtDecoder jwtDecoder() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory() {
             @Override
             protected void prepareConnection(java.net.HttpURLConnection connection, String httpMethod) throws IOException {
@@ -171,7 +206,7 @@ public class CustomSecurityConfiguration implements WebMvcConfigurer {
                 .authorizeHttpRequests((authz) -> authz
                     .requestMatchers("/actuator/info").permitAll()
                     .requestMatchers("/swagger-ui/**").permitAll()
-                    .requestMatchers("/v3/api-docs*/**").permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll()
                     .requestMatchers(HttpMethod.POST, "/otlp/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/images/**").permitAll()
                     .requestMatchers("/auth/bridge").permitAll()
