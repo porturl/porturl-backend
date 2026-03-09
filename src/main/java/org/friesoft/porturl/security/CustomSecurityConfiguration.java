@@ -233,7 +233,8 @@ public JwtDecoder jwtDecoder() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(portUrlProperties.getCors().getAllowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Range"));
+        configuration.setExposedHeaders(List.of("Content-Range"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
