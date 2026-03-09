@@ -11,12 +11,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -61,15 +66,15 @@ class CategoryServiceTest {
         ApplicationWithRolesDto dto = new ApplicationWithRolesDto();
         dto.setApplication(visibleAppDto);
 
-        when(applicationService.getApplicationsForCurrentUser()).thenReturn(List.of(dto));
+        when(applicationService.getApplicationsForCurrentUser(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(dto)));
 
         // Act
-        List<Category> result = categoryService.getVisibleCategories();
+        Page<org.friesoft.porturl.dto.Category> result = categoryService.getVisibleCategories(PageRequest.of(0, 10));
 
         // Assert
-        assertEquals(2, result.size());
-        assertEquals("Empty", result.get(0).getName());
-        assertEquals("With Apps", result.get(1).getName());
+        assertEquals(2, result.getTotalElements());
+        assertEquals("Empty", result.getContent().get(0).getName());
+        assertEquals("With Apps", result.getContent().get(1).getName());
     }
 
     @Test
@@ -84,13 +89,13 @@ class CategoryServiceTest {
         categoryWithHiddenApps.setApplications(new ArrayList<>(List.of(hiddenApp)));
 
         when(categoryRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(categoryWithHiddenApps));
-        when(applicationService.getApplicationsForCurrentUser()).thenReturn(Collections.emptyList());
+        when(applicationService.getApplicationsForCurrentUser(any(Pageable.class))).thenReturn(new PageImpl<>(Collections.emptyList()));
 
         // Act
-        List<Category> result = categoryService.getVisibleCategories();
+        Page<org.friesoft.porturl.dto.Category> result = categoryService.getVisibleCategories(PageRequest.of(0, 10));
 
         // Assert
-        assertEquals(1, result.size());
-        assertEquals(0, result.get(0).getApplications().size());
+        assertEquals(1, result.getTotalElements());
+        assertEquals(0, result.getContent().get(0).getApplications().size());
     }
 }

@@ -10,9 +10,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -52,8 +55,8 @@ class ApplicationControllerTest {
 
     @Test
     void getVisibleApplications_returnsOk() throws Exception {
-        // Arrange: Configure the mock service to return an empty list
-        when(applicationService.getApplicationsForCurrentUser()).thenReturn(List.of());
+        // Arrange: Configure the mock service to return an empty page
+        when(applicationService.getApplicationsForCurrentUser(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
 
         // Act & Assert: Perform the GET request and expect a 200 OK status
         mockMvc.perform(get("/api/applications").with(jwt()))

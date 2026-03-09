@@ -19,6 +19,11 @@ import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
@@ -108,7 +113,7 @@ class ApplicationServiceTest {
         app1.setName("Grafana");
         app1.setId(1L);
         app1.setClientId("grafana-client");
-        lenient().when(applicationRepository.findAll()).thenReturn(List.of(app1));
+        lenient().when(applicationRepository.findAll(any(Sort.class))).thenReturn(List.of(app1));
         lenient().when(applicationRepository.findById(1L)).thenReturn(Optional.of(app1));
 
         // Mock client resource chain
@@ -127,13 +132,13 @@ class ApplicationServiceTest {
         lenient().when(rolesResource.list()).thenReturn(List.of(role1, role2));
 
         // Act
-        List<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser();
+        Page<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser(PageRequest.of(0, 10));
 
         // Assert
-        assertEquals(1, result.size());
-        assertEquals("Grafana", result.get(0).getApplication().getName());
-        assertEquals(2, result.get(0).getAvailableRoles().size());
-        assertEquals("ROLE_GRAFANA_ADMIN", result.get(0).getAvailableRoles().get(0));
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Grafana", result.getContent().get(0).getApplication().getName());
+        assertEquals(2, result.getContent().get(0).getAvailableRoles().size());
+        assertEquals("ROLE_GRAFANA_ADMIN", result.getContent().get(0).getAvailableRoles().get(0));
     }
 
     @Test
@@ -146,15 +151,15 @@ class ApplicationServiceTest {
         Application app2 = new Application();
         app2.setName("Other App");
         app2.setId(2L);
-        lenient().when(applicationRepository.findAll()).thenReturn(List.of(app1, app2));
+        lenient().when(applicationRepository.findAll(any(Sort.class))).thenReturn(List.of(app1, app2));
 
         // Act
-        List<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser();
+        Page<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser(PageRequest.of(0, 10));
 
         // Assert
-        assertEquals(1, result.size());
-        assertEquals("Grafana", result.get(0).getApplication().getName());
-        assertEquals(0, result.get(0).getAvailableRoles().size()); // Users don't see available roles
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Grafana", result.getContent().get(0).getApplication().getName());
+        assertEquals(0, result.getContent().get(0).getAvailableRoles().size()); // Users don't see available roles
     }
     
     @Test
