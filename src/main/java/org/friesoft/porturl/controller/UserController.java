@@ -6,6 +6,7 @@ import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.service.UserService;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +29,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-public class UserController implements UserApi {
+public class UserController extends BaseController implements UserApi {
 
     private final UserService userService;
     private final CacheManager cacheManager;
@@ -92,11 +93,8 @@ public class UserController implements UserApi {
 
     @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<List<org.friesoft.porturl.dto.User>> getAllUsers() {
-        List<org.friesoft.porturl.dto.User> dtos = userService.findAll().stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(dtos);
+    public ResponseEntity<List<org.friesoft.porturl.dto.User>> getAllUsers(Pageable pageable) {
+        return ok(userService.findAll(pageable), "users");
     }
 
     @Override

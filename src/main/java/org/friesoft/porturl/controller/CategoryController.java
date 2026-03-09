@@ -6,6 +6,7 @@ import org.friesoft.porturl.repositories.CategoryRepository;
 import org.friesoft.porturl.service.CategoryService;
 import org.friesoft.porturl.service.ApplicationService;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-public class CategoryController implements CategoryApi {
+public class CategoryController extends BaseController implements CategoryApi {
 
     private final CategoryRepository repository;
     private final CategoryService categoryService;
@@ -29,11 +30,8 @@ public class CategoryController implements CategoryApi {
     }
 
     @Override
-    public ResponseEntity<List<org.friesoft.porturl.dto.Category>> findAllCategories() {
-        List<org.friesoft.porturl.dto.Category> dtos = this.categoryService.getVisibleCategories().stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(dtos);
+    public ResponseEntity<List<org.friesoft.porturl.dto.Category>> findAllCategories(Pageable pageable) {
+        return ok(categoryService.getVisibleCategories(pageable), "categories");
     }
 
     @Override

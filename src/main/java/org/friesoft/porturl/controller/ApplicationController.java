@@ -3,6 +3,7 @@ package org.friesoft.porturl.controller;
 import org.friesoft.porturl.api.ApplicationApi;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.service.ApplicationService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-public class ApplicationController implements ApplicationApi {
+public class ApplicationController extends BaseController implements ApplicationApi {
 
     private final ApplicationService applicationService;
 
@@ -21,8 +22,8 @@ public class ApplicationController implements ApplicationApi {
     }
 
     @Override
-    public ResponseEntity<List<org.friesoft.porturl.dto.ApplicationWithRolesDto>> getVisibleApplications() {
-        return ResponseEntity.ok(applicationService.getApplicationsForCurrentUser());
+    public ResponseEntity<List<org.friesoft.porturl.dto.ApplicationWithRolesDto>> getVisibleApplications(Pageable pageable) {
+        return ok(applicationService.getApplicationsForCurrentUser(pageable), "applications");
     }
 
     @Override

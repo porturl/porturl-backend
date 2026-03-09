@@ -24,6 +24,12 @@ openApiGenerate {
     outputDir.set(layout.buildDirectory.dir("generated/openapi").get().asFile.path)
     apiPackage.set("org.friesoft.porturl.api")
     modelPackage.set("org.friesoft.porturl.dto")
+    importMappings.set(mapOf(
+        "Pageable" to "org.springframework.data.domain.Pageable"
+    ))
+    typeMappings.set(mapOf(
+        "Pageable" to "Pageable"
+    ))
     configOptions.set(mapOf(
         "interfaceOnly" to "true",
         "useSpringBoot3" to "true",

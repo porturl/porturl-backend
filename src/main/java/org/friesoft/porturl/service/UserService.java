@@ -6,11 +6,12 @@ import org.friesoft.porturl.repositories.ApplicationRepository;
 import org.friesoft.porturl.repositories.UserRepository;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.RoleRepresentation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -95,8 +96,18 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public List<User> findAll() {
-        return userRepository.findAll();
+    public Page<org.friesoft.porturl.dto.User> findAll(Pageable pageable) {
+        return userRepository.findAll(pageable).map(this::mapToDto);
+    }
+
+    public org.friesoft.porturl.dto.User mapToDto(User user) {
+        org.friesoft.porturl.dto.User dto = new org.friesoft.porturl.dto.User();
+        dto.setId(user.getId());
+        dto.setEmail(user.getEmail());
+        dto.setProviderUserId(user.getProviderUserId());
+        dto.setImage(user.getImage());
+        dto.setImageUrl(user.getImageUrl());
+        return dto;
     }
 
     private String getRealm() {

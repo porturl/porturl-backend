@@ -14,6 +14,9 @@ import org.friesoft.porturl.util.NaturalOrderComparator;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RolesResource;
 import org.keycloak.representations.idm.RoleRepresentation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -24,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -310,14 +312,6 @@ public class ApplicationService {
             // Linked App: Assign Client Role in Target Realm
             String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : realm;
 
-            // 1. Find user in target realm (assuming username/email match)
-            // Using user.getProviderUserId() (keycloak ID) only works if it's the SAME Keycloak instance and realm.
-            // For cross-realm, we must search by username.
-            // But wait, if it's the same Keycloak instance but different realm, IDs are different.
-            // If we assume same username:
-            String username = user.getEmail(); // or username if available. User entity has email.
-            // Wait, User entity has providerUserId which is the ID in the PortUrl realm.
-            // We need to fetch the User Representation from PortUrl realm to get the username to search in target realm.
             String portUrlUserId = user.getProviderUserId();
             org.keycloak.representations.idm.UserRepresentation portUrlUser = keycloakAdminClient.realm(realm).users().get(portUrlUserId).toRepresentation();
             String usernameToSearch = portUrlUser.getUsername();
@@ -407,18 +401,17 @@ public class ApplicationService {
         return clients.get(0).getId();
     }
 
-    public List<org.friesoft.porturl.dto.ApplicationWithRolesDto> getApplicationsForCurrentUser() {
+    public Page<org.friesoft.porturl.dto.ApplicationWithRolesDto> getApplicationsForCurrentUser(Pageable pageable) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Set<String> userRoles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toSet());
 
-        List<Application> allApps = applicationRepository.findAll();
+        List<Application> allApps = applicationRepository.findAll(pageable.getSort());
 
-        String realm = getRealm();
-
+        List<org.friesoft.porturl.dto.ApplicationWithRolesDto> filteredApps;
         if (userRoles.contains("ROLE_ADMIN")) {
-            return allApps.stream()
+            filteredApps = allApps.stream()
                     .map(app -> {
                         org.friesoft.porturl.dto.ApplicationWithRolesDto dto = new org.friesoft.porturl.dto.ApplicationWithRolesDto();
                         dto.setApplication(mapToDto(app));
@@ -426,23 +419,29 @@ public class ApplicationService {
                         return dto;
                     })
                     .collect(Collectors.toList());
+        } else {
+            filteredApps = allApps.stream()
+                    .filter(app -> {
+                        String requiredRole = getAccessRoleName(app);
+                        return userRoles.contains(requiredRole);
+                    })
+                    .map(app -> {
+                        org.friesoft.porturl.dto.ApplicationWithRolesDto dto = new org.friesoft.porturl.dto.ApplicationWithRolesDto();
+                        dto.setApplication(mapToDto(app));
+                        dto.setAvailableRoles(List.of());
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
         }
 
-        // For regular users, we need to check visibility.
-        // Visibility is ALWAYS checked via the centralized access role in the PortUrl realm.
-
-        return allApps.stream()
-                .filter(app -> {
-                    String requiredRole = getAccessRoleName(app);
-                    return userRoles.contains(requiredRole);
-                })
-                .map(app -> {
-                    org.friesoft.porturl.dto.ApplicationWithRolesDto dto = new org.friesoft.porturl.dto.ApplicationWithRolesDto();
-                    dto.setApplication(mapToDto(app));
-                    dto.setAvailableRoles(List.of()); // Regular users don't see available roles list
-                    return dto;
-                })
-                .collect(Collectors.toList());
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filteredApps.size());
+        
+        if (start > filteredApps.size()) {
+            return new PageImpl<>(List.of(), pageable, filteredApps.size());
+        }
+        
+        return new PageImpl<>(filteredApps.subList(start, end), pageable, filteredApps.size());
     }
 
     public org.friesoft.porturl.dto.Application mapToDto(Application app) {
@@ -508,30 +507,28 @@ public class ApplicationService {
         }
     }
 
-        public List<String> getRolesForApplication(Long applicationId) {
-            Application app = applicationRepository.findById(applicationId)
-                    .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+    public List<String> getRolesForApplication(Long applicationId) {
+        Application app = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
-            String realm = getRealm();
+        String realm = getRealm();
 
-            if (app.getClientId() != null && !app.getClientId().isBlank()) {
-                // Linked App: Fetch Client Roles
-                String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : realm;
-                try {
-                    String clientUuid = getClientUuid(targetRealm, app.getClientId());
-                    return getKeycloakAdminClient(targetRealm).realm(targetRealm).clients().get(clientUuid).roles().list().stream()
-                            .map(RoleRepresentation::getName)
-                            .filter(name -> !name.equals(getAccessRoleName(app))) // Exclude access role
-                            .collect(Collectors.toList());
-                } catch (Exception e) {
-                    log.warn("Could not fetch roles for linked application {} in realm {}: {}", app.getName(), targetRealm, e.getMessage());
-                    return List.of();
-                }
-            } else {
-                // Unlinked App: only access role which is not in this list.
+        if (app.getClientId() != null && !app.getClientId().isBlank()) {
+            String targetRealm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : realm;
+            try {
+                String clientUuid = getClientUuid(targetRealm, app.getClientId());
+                return getKeycloakAdminClient(targetRealm).realm(targetRealm).clients().get(clientUuid).roles().list().stream()
+                        .map(RoleRepresentation::getName)
+                        .filter(name -> !name.equals(getAccessRoleName(app))) // Exclude access role
+                        .collect(Collectors.toList());
+            } catch (Exception e) {
+                log.warn("Could not fetch roles for linked application {} in realm {}: {}", app.getName(), targetRealm, e.getMessage());
                 return List.of();
             }
+        } else {
+            return List.of();
         }
+    }
 
     public void enforceApplicationSortOrder(Category category) {
         if (category.getApplicationSortMode() == Category.SortMode.ALPHABETICAL && category.getApplications() != null) {
