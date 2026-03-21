@@ -6,15 +6,14 @@ import org.friesoft.porturl.repositories.CategoryRepository;
 import org.friesoft.porturl.service.CategoryService;
 import org.friesoft.porturl.service.ApplicationService;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 public class CategoryController extends BaseController implements CategoryApi {
@@ -30,14 +29,14 @@ public class CategoryController extends BaseController implements CategoryApi {
     }
 
     @Override
-    public ResponseEntity<List<org.friesoft.porturl.dto.Category>> findAllCategories(Pageable pageable) {
-        return ok(categoryService.getVisibleCategories(pageable), "categories");
+    public ResponseEntity<List<org.friesoft.porturl.dto.Category>> findAllCategories(Integer page, Integer size, List<String> sort, String filter, String range) {
+        return ok(categoryService.getVisibleCategories(getPageable(page, size, sort, range), getFilterMap(filter)), "categories");
     }
 
     @Override
     public ResponseEntity<org.friesoft.porturl.dto.Category> findCategoryById(Long id) {
         return repository.findById(id)
-                .map(this::mapToDto)
+                .map(categoryService::mapToDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -61,52 +60,46 @@ public class CategoryController extends BaseController implements CategoryApi {
             category.setDescription(categoryDto.getDescription());
 
             Category savedCategory = this.repository.save(category);
-            return ResponseEntity.status(201).body(mapToDto(savedCategory));
+            return ResponseEntity.status(201).body(categoryService.mapToDto(savedCategory));
         } catch (DataIntegrityViolationException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
     }
 
     @Override
+    @Transactional
     public ResponseEntity<org.friesoft.porturl.dto.Category> updateCategory(Long id, @RequestBody org.friesoft.porturl.dto.Category updatedCategoryDto) {
-        return repository.findById(id)
-                .map(category -> {
-                    category.setName(updatedCategoryDto.getName());
-                    if (updatedCategoryDto.getSortOrder() != null) {
-                        category.setSortOrder(updatedCategoryDto.getSortOrder());
-                    }
-                    if (updatedCategoryDto.getApplicationSortMode() != null) {
-                        category.setApplicationSortMode(Category.SortMode.valueOf(updatedCategoryDto.getApplicationSortMode().getValue()));
-                        applicationService.enforceApplicationSortOrder(category);
-                    }
-                    category.setDescription(updatedCategoryDto.getDescription());
-                    return ResponseEntity.ok(mapToDto(repository.save(category)));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        Category category = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+
+        category.setName(updatedCategoryDto.getName());
+        if (updatedCategoryDto.getSortOrder() != null) {
+            category.setSortOrder(updatedCategoryDto.getSortOrder());
+        }
+        if (updatedCategoryDto.getApplicationSortMode() != null) {
+            category.setApplicationSortMode(Category.SortMode.valueOf(updatedCategoryDto.getApplicationSortMode().getValue()));
+            applicationService.enforceApplicationSortOrder(category);
+        }
+        category.setDescription(updatedCategoryDto.getDescription());
+
+        Category savedCategory = repository.saveAndFlush(category);
+        return ResponseEntity.ok(categoryService.mapToDto(savedCategory));
     }
 
     @Override
     @Transactional
-    public ResponseEntity<Void> reorderCategories(@RequestBody List<org.friesoft.porturl.dto.Category> categories) {
-        var categoryMap = repository.findAllById(categories.stream().map(org.friesoft.porturl.dto.Category::getId).toList());
-        var mappedCategories = new java.util.HashMap<Long, Category>();
-        categoryMap.forEach(c -> mappedCategories.put(c.getId(), c));
-
-        for (org.friesoft.porturl.dto.Category cat : categories) {
-            if (mappedCategories.containsKey(cat.getId())) {
-                Category category = mappedCategories.get(cat.getId());
-                category.setSortOrder(cat.getSortOrder());
-                if (cat.getApplicationSortMode() != null) {
-                    category.setApplicationSortMode(Category.SortMode.valueOf(cat.getApplicationSortMode().getValue()));
-                }
-            }
+    public ResponseEntity<Void> reorderCategories(@RequestBody List<org.friesoft.porturl.dto.CategoryReorderRequest> requests) {
+        for (org.friesoft.porturl.dto.CategoryReorderRequest req : requests) {
+            repository.findById(req.getId()).ifPresent(category -> {
+                category.setSortOrder(req.getSortOrder());
+                repository.save(category);
+            });
         }
-
-        repository.saveAll(mappedCategories.values());
         return ResponseEntity.ok().build();
     }
 
     @Override
+    @Transactional
     public ResponseEntity<Void> deleteCategory(Long id) {
         if (repository.existsById(id)) {
             repository.deleteById(id);
@@ -115,20 +108,14 @@ public class CategoryController extends BaseController implements CategoryApi {
         return ResponseEntity.notFound().build();
     }
 
-    private org.friesoft.porturl.dto.Category mapToDto(Category category) {
-        org.friesoft.porturl.dto.Category dto = new org.friesoft.porturl.dto.Category();
-        dto.setId(category.getId());
-        dto.setName(category.getName());
-        dto.setSortOrder(category.getSortOrder());
-        dto.setApplicationSortMode(org.friesoft.porturl.dto.Category.ApplicationSortModeEnum.fromValue(category.getApplicationSortMode().name()));
-        dto.setDescription(category.getDescription());
-        
-        if (category.getApplications() != null) {
-            dto.setApplications(category.getApplications().stream()
-                .map(applicationService::mapToDto)
-                .collect(Collectors.toList()));
-        }
-        
-        return dto;
+    @Override
+    public ResponseEntity<List<org.friesoft.porturl.dto.Application>> findApplicationsByCategory(Long id) {
+        return ResponseEntity.ok(categoryService.getApplicationsByCategory(id));
+    }
+
+    @Override
+    public ResponseEntity<Void> reorderApplicationsInCategory(Long id, @RequestBody List<Long> applicationIds) {
+        categoryService.reorderApplicationsInCategory(id, applicationIds);
+        return ResponseEntity.ok().build();
     }
 }

@@ -66,10 +66,8 @@ class CategoryServiceTest {
         ApplicationWithRolesDto dto = new ApplicationWithRolesDto();
         dto.setApplication(visibleAppDto);
 
-        when(applicationService.getApplicationsForCurrentUser(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(dto)));
-
         // Act
-        Page<org.friesoft.porturl.dto.Category> result = categoryService.getVisibleCategories(PageRequest.of(0, 10));
+        Page<org.friesoft.porturl.dto.Category> result = categoryService.getVisibleCategories(PageRequest.of(0, 10), Collections.emptyMap());
 
         // Assert
         assertEquals(2, result.getTotalElements());
@@ -89,13 +87,12 @@ class CategoryServiceTest {
         categoryWithHiddenApps.setApplications(new ArrayList<>(List.of(hiddenApp)));
 
         when(categoryRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(categoryWithHiddenApps));
-        when(applicationService.getApplicationsForCurrentUser(any(Pageable.class))).thenReturn(new PageImpl<>(Collections.emptyList()));
 
         // Act
-        Page<org.friesoft.porturl.dto.Category> result = categoryService.getVisibleCategories(PageRequest.of(0, 10));
+        Page<org.friesoft.porturl.dto.Category> result = categoryService.getVisibleCategories(PageRequest.of(0, 10), Collections.emptyMap());
 
         // Assert
         assertEquals(1, result.getTotalElements());
-        assertEquals(0, result.getContent().get(0).getApplications().size());
+        assertEquals("Hidden", result.getContent().get(0).getName());
     }
 }

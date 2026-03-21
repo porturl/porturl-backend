@@ -1,5 +1,8 @@
 package org.friesoft.porturl.service;
 
+import lombok.extern.slf4j.Slf4j;
+import org.keycloak.representations.idm.UserRepresentation;
+import jakarta.ws.rs.core.Response;
 import org.friesoft.porturl.config.PorturlProperties;
 import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.repositories.ApplicationRepository;
@@ -7,6 +10,7 @@ import org.friesoft.porturl.repositories.UserRepository;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -26,6 +30,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -96,13 +101,123 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public Page<org.friesoft.porturl.dto.User> findAll(Pageable pageable) {
-        return userRepository.findAll(pageable).map(this::mapToDto);
+    public User findById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    public User save(org.friesoft.porturl.dto.User userDto) {
+        String realm = getRealm();
+        
+        // 1. Create in Keycloak
+        UserRepresentation kcUser = new UserRepresentation();
+        kcUser.setUsername(userDto.getUsername());
+        kcUser.setEmail(userDto.getEmail());
+        kcUser.setEnabled(true);
+        kcUser.setEmailVerified(userDto.getEmail() != null);
+
+        try (Response response = keycloakAdminClient.realm(realm).users().create(kcUser)) {
+            if (response.getStatus() != 201) {
+                if (response.getStatus() == 409) {
+                    // User might already exist in Keycloak, try to find them by username
+                    List<UserRepresentation> existing = keycloakAdminClient.realm(realm).users().search(userDto.getUsername(), true);
+                    if (!existing.isEmpty()) {
+                        kcUser = existing.get(0);
+                    } else {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "User already exists in Keycloak but could not be retrieved");
+                    }
+                } else {
+                    String error = response.readEntity(String.class);
+                    log.error("Failed to create user in Keycloak. Status: {}, Error: {}", response.getStatus(), error);
+                    throw new ResponseStatusException(HttpStatus.valueOf(response.getStatus()), "Failed to create user in Keycloak");
+                }
+            } else {
+                // Get the created user's ID from the Location header
+                String userId = response.getLocation().getPath().replaceAll(".*/([^/]+)$", "$1");
+                kcUser = keycloakAdminClient.realm(realm).users().get(userId).toRepresentation();
+            }
+        }
+
+        // 2. Create in local DB
+        User user = new User();
+        user.setUsername(userDto.getUsername());
+        user.setEmail(userDto.getEmail());
+        user.setProviderUserId(kcUser.getId());
+        user.setImage(userDto.getImage());
+        return userRepository.save(user);
+    }
+
+    public User update(Long id, org.friesoft.porturl.dto.User userDto) {
+        User user = findById(id);
+        
+        if (userDto.getUsername() != null) {
+            user.setUsername(userDto.getUsername());
+        }
+        user.setEmail(userDto.getEmail()); // Email can be set to null
+        if (userDto.getProviderUserId() != null) {
+            user.setProviderUserId(userDto.getProviderUserId());
+        }
+        if (userDto.getImage() != null) {
+            user.setImage(userDto.getImage());
+        }
+        User savedUser = userRepository.save(user);
+
+        // Sync with Keycloak
+        if (savedUser.getProviderUserId() != null) {
+            try {
+                String realm = getRealm();
+                UserRepresentation kcUser = keycloakAdminClient.realm(realm).users().get(savedUser.getProviderUserId()).toRepresentation();
+                kcUser.setEmail(savedUser.getEmail());
+                kcUser.setUsername(savedUser.getUsername());
+                keycloakAdminClient.realm(realm).users().get(savedUser.getProviderUserId()).update(kcUser);
+            } catch (Exception e) {
+                // Log warning but don't fail the local update
+            }
+        }
+
+        return savedUser;
+    }
+
+    public void delete(Long id) {
+        User user = findById(id);
+        
+        // 1. Delete from Keycloak
+        if (user.getProviderUserId() != null) {
+            try {
+                String realm = getRealm();
+                keycloakAdminClient.realm(realm).users().get(user.getProviderUserId()).remove();
+            } catch (Exception e) {
+                // Log warning
+            }
+        }
+
+        // 2. Delete from local DB
+        userRepository.delete(user);
+    }
+
+    public Page<org.friesoft.porturl.dto.User> findAll(Pageable pageable, String q) {
+        List<User> allUsers = userRepository.findAll(pageable.getSort());
+        List<org.friesoft.porturl.dto.User> filteredUsers = allUsers.stream()
+                .filter(user -> q == null || q.isEmpty() || 
+                        (user.getEmail() != null && user.getEmail().toLowerCase().contains(q.toLowerCase())) ||
+                        (user.getUsername() != null && user.getUsername().toLowerCase().contains(q.toLowerCase())))
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filteredUsers.size());
+
+        if (start > filteredUsers.size()) {
+            return new PageImpl<>(List.of(), pageable, filteredUsers.size());
+        }
+
+        return new PageImpl<>(filteredUsers.subList(start, end), pageable, filteredUsers.size());
     }
 
     public org.friesoft.porturl.dto.User mapToDto(User user) {
         org.friesoft.porturl.dto.User dto = new org.friesoft.porturl.dto.User();
         dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setProviderUserId(user.getProviderUserId());
         dto.setImage(user.getImage());

@@ -3,7 +3,6 @@ package org.friesoft.porturl.controller;
 import org.friesoft.porturl.api.ApplicationApi;
 import org.friesoft.porturl.entities.Application;
 import org.friesoft.porturl.service.ApplicationService;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,8 +21,8 @@ public class ApplicationController extends BaseController implements Application
     }
 
     @Override
-    public ResponseEntity<List<org.friesoft.porturl.dto.ApplicationWithRolesDto>> getVisibleApplications(Pageable pageable) {
-        return ok(applicationService.getApplicationsForCurrentUser(pageable), "applications");
+    public ResponseEntity<List<org.friesoft.porturl.dto.ApplicationWithRolesDto>> getVisibleApplications(Integer page, Integer size, List<String> sort, String filter, String range) {
+        return ok(applicationService.getApplicationsForCurrentUser(getPageable(page, size, sort, range), getQuery(filter)), "applications");
     }
 
     @Override
@@ -54,8 +53,8 @@ public class ApplicationController extends BaseController implements Application
 
     @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<Void> reorderApplications(@RequestBody List<org.friesoft.porturl.dto.Category> categories) {
-        applicationService.reorderApplications(categories);
+    public ResponseEntity<Void> moveApplication(Long id, @RequestBody org.friesoft.porturl.dto.MoveApplicationRequest request) {
+        applicationService.moveApplication(id, request);
         return ResponseEntity.ok().build();
     }
 

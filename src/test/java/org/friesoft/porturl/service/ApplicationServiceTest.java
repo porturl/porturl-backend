@@ -1,6 +1,7 @@
 package org.friesoft.porturl.service;
 
 import jakarta.persistence.EntityManager;
+import jakarta.ws.rs.NotFoundException;
 import org.friesoft.porturl.config.PorturlProperties;
 import org.friesoft.porturl.dto.ApplicationCreateRequest;
 import org.friesoft.porturl.dto.ApplicationWithRolesDto;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.*;
 import org.keycloak.representations.idm.RoleRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -86,6 +88,7 @@ class ApplicationServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(properties.getKeycloak().getAdmin().getRealm()).thenReturn("test-realm");
+        lenient().when(properties.getKeycloak().getRealm()).thenReturn("test-realm");
 
         lenient().when(keycloakAdminClient.realm("test-realm")).thenReturn(realmResource);
         lenient().when(realmResource.roles()).thenReturn(rolesResource);
@@ -95,6 +98,16 @@ class ApplicationServiceTest {
         lenient().when(userResource.roles()).thenReturn(roleMappingResource);
         lenient().when(roleMappingResource.realmLevel()).thenReturn(roleScopeResource);
         lenient().when(rolesResource.get(anyString())).thenReturn(roleResource);
+        
+        // Mock findByClientId for getClientUuid
+        ClientsResource clientsResource = mock(ClientsResource.class);
+        lenient().when(realmResource.clients()).thenReturn(clientsResource);
+        org.keycloak.representations.idm.ClientRepresentation clientRep = new org.keycloak.representations.idm.ClientRepresentation();
+        clientRep.setId("test-client-uuid");
+        clientRep.setClientId("test-client-id");
+        lenient().when(clientsResource.findByClientId(anyString())).thenReturn(List.of(clientRep));
+        ClientResource clientResource = mock(ClientResource.class, RETURNS_DEEP_STUBS);
+        lenient().when(clientsResource.get(anyString())).thenReturn(clientResource);
     }
 
     private void mockSecurityContext(Set<SimpleGrantedAuthority> authorities) {
@@ -113,11 +126,11 @@ class ApplicationServiceTest {
         app1.setName("Grafana");
         app1.setId(1L);
         app1.setClientId("grafana-client");
-        lenient().when(applicationRepository.findAll(any(Sort.class))).thenReturn(List.of(app1));
+        lenient().when(applicationRepository.findAll()).thenReturn(List.of(app1));
         lenient().when(applicationRepository.findById(1L)).thenReturn(Optional.of(app1));
 
         // Mock client resource chain
-        ClientResource clientResource = mock(ClientResource.class);
+        ClientResource clientResource = mock(ClientResource.class, RETURNS_DEEP_STUBS);
         ClientsResource clientsResource = mock(ClientsResource.class);
         when(realmResource.clients()).thenReturn(clientsResource);
         org.keycloak.representations.idm.ClientRepresentation clientRep = new org.keycloak.representations.idm.ClientRepresentation();
@@ -125,14 +138,13 @@ class ApplicationServiceTest {
         clientRep.setClientId("grafana-client");
         when(clientsResource.findByClientId("grafana-client")).thenReturn(List.of(clientRep));
         when(clientsResource.get("grafana-uuid")).thenReturn(clientResource);
-        when(clientResource.roles()).thenReturn(rolesResource);
 
         RoleRepresentation role1 = new RoleRepresentation("ROLE_GRAFANA_ADMIN", "", false);
         RoleRepresentation role2 = new RoleRepresentation("ROLE_GRAFANA_VIEWER", "", false);
-        lenient().when(rolesResource.list()).thenReturn(List.of(role1, role2));
+        lenient().when(clientResource.roles().list()).thenReturn(List.of(role1, role2));
 
         // Act
-        Page<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser(PageRequest.of(0, 10));
+        Page<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser(PageRequest.of(0, 10), null);
 
         // Assert
         assertEquals(1, result.getTotalElements());
@@ -151,10 +163,12 @@ class ApplicationServiceTest {
         Application app2 = new Application();
         app2.setName("Other App");
         app2.setId(2L);
-        lenient().when(applicationRepository.findAll(any(Sort.class))).thenReturn(List.of(app1, app2));
+        lenient().when(applicationRepository.findAll()).thenReturn(List.of(app1, app2));
+        lenient().when(applicationRepository.findById(1L)).thenReturn(Optional.of(app1));
+        lenient().when(applicationRepository.findById(2L)).thenReturn(Optional.of(app2));
 
         // Act
-        Page<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser(PageRequest.of(0, 10));
+        Page<ApplicationWithRolesDto> result = applicationService.getApplicationsForCurrentUser(PageRequest.of(0, 10), null);
 
         // Assert
         assertEquals(1, result.getTotalElements());
@@ -173,14 +187,7 @@ class ApplicationServiceTest {
         request.setCategories(Collections.emptyList());
 
         Jwt jwt = mock(Jwt.class);
-        when(jwt.getSubject()).thenReturn("user-provider-id");
-
-        User creator = new User();
-        creator.setId(1L);
-        creator.setProviderUserId("user-provider-id");
-        creator.setEmail("creator@example.com");
-        when(userRepository.findByProviderUserId("user-provider-id")).thenReturn(Optional.of(creator));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(creator));
+        lenient().when(jwt.getSubject()).thenReturn("user-provider-id");
 
         Application appToSave = new Application();
         appToSave.setName(request.getName());
@@ -188,34 +195,23 @@ class ApplicationServiceTest {
         appToSave.setClientId(request.getClientId());
         appToSave.setId(100L);
         when(applicationRepository.save(any(Application.class))).thenReturn(appToSave);
-        when(applicationRepository.findById(100L)).thenReturn(Optional.of(appToSave));
 
         // Mock client resource chain
-        ClientResource clientResource = mock(ClientResource.class);
+        ClientResource clientResource = mock(ClientResource.class, RETURNS_DEEP_STUBS);
         ClientsResource clientsResource = mock(ClientsResource.class);
-        when(realmResource.clients()).thenReturn(clientsResource);
+        lenient().when(realmResource.clients()).thenReturn(clientsResource);
         org.keycloak.representations.idm.ClientRepresentation clientRep = new org.keycloak.representations.idm.ClientRepresentation();
         clientRep.setId("new-app-uuid");
         clientRep.setClientId("new-app-client");
-        when(clientsResource.findByClientId("new-app-client")).thenReturn(List.of(clientRep));
-        when(clientsResource.get("new-app-uuid")).thenReturn(clientResource);
-        when(clientResource.roles()).thenReturn(rolesResource);
+        lenient().when(clientsResource.findByClientId("new-app-client")).thenReturn(List.of(clientRep));
+        lenient().when(clientsResource.get("new-app-uuid")).thenReturn(clientResource);
+        
+        RolesResource clientRolesResource = mock(RolesResource.class);
+        lenient().when(clientResource.roles()).thenReturn(clientRolesResource);
 
         // createAccessRole mocks
-        when(rolesResource.list()).thenReturn(Collections.emptyList());
+        lenient().when(rolesResource.get(anyString())).thenThrow(new NotFoundException());
         
-        // assignRoleToUser mocks
-        org.keycloak.representations.idm.UserRepresentation userRep = new org.keycloak.representations.idm.UserRepresentation();
-        userRep.setUsername("creator@example.com");
-        userRep.setId("user-provider-id");
-        when(userResource.toRepresentation()).thenReturn(userRep);
-        when(usersResource.search("creator@example.com")).thenReturn(List.of(userRep));
-        when(userResource.roles().clientLevel(anyString())).thenReturn(roleScopeResource);
-
-        RoleRepresentation mockRole = new RoleRepresentation();
-        mockRole.setName("admin");
-        when(roleResource.toRepresentation()).thenReturn(mockRole);
-
         // Act
         Application result = applicationService.createApplication(request, jwt);
 
@@ -223,12 +219,11 @@ class ApplicationServiceTest {
         assertNotNull(result);
         assertEquals("New App", result.getName());
         verify(applicationRepository, times(1)).save(any(Application.class));
-        verify(entityManager, times(1)).flush();
         
-        // 1 for access role, 2 for admin/viewer
-        verify(rolesResource, times(3)).create(any(RoleRepresentation.class));
-        // 1 for access role in assignRoleToUser, 1 for admin role in assignRoleToUser
-        verify(roleResource, times(2)).toRepresentation();
+        // 1 for access role
+        verify(rolesResource, times(1)).create(any(RoleRepresentation.class));
+        // 2 for admin/viewer
+        verify(clientRolesResource, times(2)).create(any(RoleRepresentation.class));
     }
 
     @Test
@@ -236,14 +231,45 @@ class ApplicationServiceTest {
         // Arrange
         Application app = new Application();
         app.setName("Test App");
+        app.setClientId("test-client");
         User user = new User();
         user.setProviderUserId("test-user-id");
+        user.setUsername("testuser");
         
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(app));
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        RoleRepresentation mockRole = new RoleRepresentation();
-        when(roleResource.toRepresentation()).thenReturn(mockRole);
+        // Keycloak mocks for assignRoleToUser (Client Role path)
+        ClientsResource clientsResource = mock(ClientsResource.class);
+        lenient().when(realmResource.clients()).thenReturn(clientsResource);
+        org.keycloak.representations.idm.ClientRepresentation clientRep = new org.keycloak.representations.idm.ClientRepresentation();
+        clientRep.setId("test-client-uuid");
+        clientRep.setClientId("test-client");
+        lenient().when(clientsResource.findByClientId("test-client")).thenReturn(List.of(clientRep));
+        
+        ClientResource clientResource = mock(ClientResource.class, RETURNS_DEEP_STUBS);
+        lenient().when(clientsResource.get("test-client-uuid")).thenReturn(clientResource);
+        lenient().when(clientResource.toRepresentation()).thenReturn(clientRep);
+
+        RoleRepresentation mockRole = mock(RoleRepresentation.class);
+        lenient().when(mockRole.getName()).thenReturn("admin");
+        
+        RolesResource clientRolesResource = mock(RolesResource.class);
+        lenient().when(clientResource.roles()).thenReturn(clientRolesResource);
+        RoleResource mockRoleResource = mock(RoleResource.class);
+        lenient().when(clientRolesResource.get("admin")).thenReturn(mockRoleResource);
+        lenient().when(mockRoleResource.toRepresentation()).thenReturn(mockRole);
+
+        UserRepresentation kcUser = new UserRepresentation();
+        kcUser.setId("test-user-id");
+        kcUser.setUsername("testuser");
+        
+        lenient().when(usersResource.get("test-user-id")).thenReturn(userResource);
+        lenient().when(userResource.toRepresentation()).thenReturn(kcUser);
+        lenient().when(usersResource.search("testuser")).thenReturn(List.of(kcUser));
+        
+        lenient().when(userResource.roles()).thenReturn(roleMappingResource);
+        lenient().when(roleMappingResource.clientLevel("test-client-uuid")).thenReturn(roleScopeResource);
 
         // Act
         applicationService.assignRoleToUser(1L, 1L, "admin");

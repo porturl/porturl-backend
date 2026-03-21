@@ -56,7 +56,7 @@ class ApplicationControllerTest {
     @Test
     void getVisibleApplications_returnsOk() throws Exception {
         // Arrange: Configure the mock service to return an empty page
-        when(applicationService.getApplicationsForCurrentUser(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+        when(applicationService.getApplicationsForCurrentUser(any(Pageable.class), any())).thenReturn(new PageImpl<>(List.of()));
 
         // Act & Assert: Perform the GET request and expect a 200 OK status
         mockMvc.perform(get("/api/applications").with(jwt()))
