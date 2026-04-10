@@ -22,7 +22,7 @@ h2 = "2.4.240"
 
 keycloak = "26.0.8"
 jakarta-validation = "3.1.1"
-swagger-annotations = "2.2.44"
+swagger-annotations = "2.2.45"
 caffeine = "3.2.3"
 
 [libraries]
