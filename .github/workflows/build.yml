@@ -193,7 +193,7 @@ jobs:
           echo "Docker tags (JVM): $TAGS_JVM"
 
       - name: Build and push Native Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile.native
@@ -211,7 +211,7 @@ jobs:
             org.opencontainers.image.created=${{ needs.build.outputs.timestamp }}
 
       - name: Build and push JVM Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
