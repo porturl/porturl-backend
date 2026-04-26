@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.12.0](https://github.com/porturl/porturl-backend/compare/v0.11.0...v0.12.0) (2026-04-26)
+
+
+### Features
+
+* add build information ([5898a85](https://github.com/porturl/porturl-backend/commit/5898a859e4923aaa184ea16f7dfcf6ab7fd8f1bc))
+* filter roles (hide keycloak internal) ([1198d98](https://github.com/porturl/porturl-backend/commit/1198d982ca2c075a38dac80b5e8592f1aa640b2f))
+* support react admin paging ([004b376](https://github.com/porturl/porturl-backend/commit/004b3766f6ccf713488d5228f249ec23be67b6df))
+
+
+### Bug Fixes
+
+* set allowed and exposed headers ([0f4f53a](https://github.com/porturl/porturl-backend/commit/0f4f53a56ad01ab0d7d8a3415393b17599f9cb01))
+* unit tests ([46b4400](https://github.com/porturl/porturl-backend/commit/46b44003195e5bceda7ab596acd45c4fe7732982))
+* workarounds for react admin frontend to work ([999b71d](https://github.com/porturl/porturl-backend/commit/999b71d3ff342120ac5503a48db0191dd32f5ca7))
+
 ## [0.11.0](https://github.com/porturl/porturl-backend/compare/v0.10.0...v0.11.0) (2026-02-28)
 
 
