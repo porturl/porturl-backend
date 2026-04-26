@@ -34,6 +34,7 @@ public class AdminService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final ApplicationService applicationService;
+    private final UserService userService;
     private final FileStorageService fileStorageService;
     private final PorturlProperties properties;
     private final ObjectMapper yamlMapper;
@@ -44,12 +45,14 @@ public class AdminService {
                         CategoryRepository categoryRepository,
                         UserRepository userRepository,
                         ApplicationService applicationService,
+                        UserService userService,
                         FileStorageService fileStorageService,
                         PorturlProperties properties) {
         this.applicationRepository = applicationRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.applicationService = applicationService;
+        this.userService = userService;
         this.fileStorageService = fileStorageService;
         this.properties = properties;
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
@@ -86,6 +89,9 @@ public class AdminService {
         exportData.setCategories(categoryRepository.findAll().stream().map(this::mapCategoryToExport).collect(Collectors.toList()));
         exportData.setApplications(applicationRepository.findAll().stream()
                 .map(this::mapApplicationToExport)
+                .collect(Collectors.toList()));
+        exportData.setUsers(userRepository.findAll().stream()
+                .map(userService::mapToDto)
                 .collect(Collectors.toList()));
         return exportData;
     }
@@ -142,6 +148,7 @@ public class AdminService {
 
     private CategoryExport mapCategoryToExport(Category category) {
         CategoryExport export = new CategoryExport();
+        export.setId(category.getId());
         export.setName(category.getName());
         export.setSortOrder(category.getSortOrder());
         export.setDescription(category.getDescription());
@@ -151,6 +158,7 @@ public class AdminService {
 
     private ApplicationExport mapApplicationToExport(Application app) {
         ApplicationExport export = new ApplicationExport();
+        export.setId(app.getId());
         export.setName(app.getName());
         export.setUrl(app.getUrl());
         export.setCategories(app.getCategories().stream().map(Category::getName).collect(Collectors.toList()));
@@ -191,7 +199,7 @@ public class AdminService {
     }
 
     @Transactional
-    public void syncData(ExportData data, User creator) {
+    public synchronized void syncData(ExportData data, User creator) {
         log.info("Starting differential sync...");
         this.isSyncing = true;
         try {
@@ -269,7 +277,7 @@ public class AdminService {
                     app.setClientId(appExport.getClientId());
                     app.setRealm(appExport.getRealm());
 
-                    if (app.getCreatedBy() == null) {
+                    if (app.getCreatedBy() == null && creator != null) {
                         app.setCreatedBy(creator);
                     }
                     if (appExport.getIcon() != null) {
@@ -322,12 +330,53 @@ public class AdminService {
                 }
             }
 
+            // Enforce sort orders
+            synchronizedCategories.values().forEach(applicationService::enforceApplicationSortOrder);
+
             // Final save for categories (owning side)
             categoryRepository.saveAll(synchronizedCategories.values());
             categoryRepository.flush();
             applicationRepository.flush();
 
             log.info("Differential sync logic completed.");
+
+            // --- 5. Sync Users ---
+            log.debug("Syncing users...");
+            Set<String> usersInYaml = new HashSet<>();
+            if (data.getUsers() != null) {
+                for (org.friesoft.porturl.dto.User userDto : data.getUsers()) {
+                    usersInYaml.add(userDto.getUsername());
+                    
+                    // Robust lookup: check both providerUserId and username
+                    Optional<User> existingUser = Optional.empty();
+                    if (userDto.getProviderUserId() != null) {
+                        existingUser = userRepository.findByProviderUserId(userDto.getProviderUserId());
+                    }
+                    if (existingUser.isEmpty()) {
+                        existingUser = userRepository.findByUsername(userDto.getUsername());
+                    }
+
+                    existingUser.ifPresentOrElse(
+                        user -> userService.update(user.getId(), userDto),
+                        () -> userService.save(userDto)
+                    );
+                }
+            }
+
+            // Remove users not in YAML (except current creator to avoid lockout)
+            userRepository.findAll().forEach(user -> {
+                if (!usersInYaml.contains(user.getUsername()) && (creator == null || !user.getUsername().equals(creator.getUsername()))) {
+                    // Extra safety: never delete admins automatically
+                    boolean isAdmin = userService.getUserRoles(user.getId()).stream()
+                        .anyMatch(r -> r.equalsIgnoreCase("admin") || r.equalsIgnoreCase("role_admin") || r.startsWith("ROLE_ADMIN"));
+                    
+                    if (!isAdmin) {
+                        userService.delete(user.getId());
+                    } else {
+                        log.warn("Skipping automatic removal of admin user: {}", user.getUsername());
+                    }
+                }
+            });
 
             // Update hash after successful sync to avoid circular export
             try {

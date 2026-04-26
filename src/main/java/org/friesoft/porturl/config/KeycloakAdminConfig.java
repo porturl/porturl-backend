@@ -28,6 +28,7 @@ public class KeycloakAdminConfig {
     }
 
     @Bean
+    @org.springframework.context.annotation.Primary
     public Keycloak keycloakAdmin() {
         return createKeycloakClient(properties.getKeycloak().getAdmin());
     }

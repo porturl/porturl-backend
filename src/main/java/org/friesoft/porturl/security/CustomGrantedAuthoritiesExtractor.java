@@ -31,15 +31,28 @@ public class CustomGrantedAuthoritiesExtractor {
     public synchronized Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
         String providerUserId = jwt.getSubject();
         String email = jwt.getClaimAsString("email");
+        String username = jwt.getClaimAsString("preferred_username");
+        if (username == null) {
+            username = email;
+        }
+        if (username == null) {
+            username = providerUserId;
+        }
+
+        final String finalUsername = username;
 
         userRepository.findByProviderUserId(providerUserId)
-            .or(() -> userRepository.findByEmail(email).map(user -> {
+            .or(() -> userRepository.findByUsername(finalUsername).map(user -> {
                 user.setProviderUserId(providerUserId);
+                if (user.getEmail() == null && email != null) {
+                    user.setEmail(email);
+                }
                 return userRepository.save(user);
             }))
             .orElseGet(() -> {
                 User newUser = new User();
                 newUser.setProviderUserId(providerUserId);
+                newUser.setUsername(finalUsername);
                 newUser.setEmail(email);
                 return userRepository.save(newUser);
             });
@@ -51,7 +64,13 @@ public class CustomGrantedAuthoritiesExtractor {
         if (realmAccess != null && realmAccess.containsKey("roles")) {
             List<String> roles = jsonMapper.convertValue(realmAccess.get("roles"), new TypeReference<>() {});
             roles.stream()
-                .map(SimpleGrantedAuthority::new)
+                .map(role -> {
+                    String r = role.toUpperCase();
+                    if (!r.startsWith("ROLE_") && !r.startsWith("APP_")) {
+                        r = "ROLE_" + r;
+                    }
+                    return new SimpleGrantedAuthority(r);
+                })
                 .forEach(authorities::add);
         }
 

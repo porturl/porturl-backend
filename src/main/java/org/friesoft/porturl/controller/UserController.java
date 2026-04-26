@@ -4,6 +4,7 @@ import org.friesoft.porturl.api.UserApi;
 import org.friesoft.porturl.dto.CreateAuthTicket200Response;
 import org.friesoft.porturl.entities.User;
 import org.friesoft.porturl.service.UserService;
+import org.friesoft.porturl.service.AdminService;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -23,6 +25,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -33,10 +37,12 @@ public class UserController extends BaseController implements UserApi {
 
     private final UserService userService;
     private final CacheManager cacheManager;
+    private final AdminService adminService;
 
-    public UserController(UserService userService, CacheManager cacheManager) {
+    public UserController(UserService userService, CacheManager cacheManager, AdminService adminService) {
         this.userService = userService;
         this.cacheManager = cacheManager;
+        this.adminService = adminService;
     }
 
     @Override
@@ -93,8 +99,48 @@ public class UserController extends BaseController implements UserApi {
 
     @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<List<org.friesoft.porturl.dto.User>> getAllUsers(Pageable pageable) {
-        return ok(userService.findAll(pageable), "users");
+    public ResponseEntity<List<org.friesoft.porturl.dto.User>> getAllUsers(Integer page, Integer size, List<String> sort, String filter, String range) {
+        return ok(userService.findAll(getPageable(page, size, sort, range), getQuery(filter)), "users");
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Transactional
+    public ResponseEntity<org.friesoft.porturl.dto.User> createUser(@RequestBody org.friesoft.porturl.dto.User user) {
+        ResponseEntity<org.friesoft.porturl.dto.User> response = ResponseEntity.status(HttpStatus.CREATED).body(mapToDto(userService.save(user)));
+        adminService.exportToFile();
+        return response;
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<org.friesoft.porturl.dto.User> getUserById(Long id) {
+        return ResponseEntity.ok(mapToDto(userService.findById(id)));
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Transactional
+    public ResponseEntity<org.friesoft.porturl.dto.User> updateUser(Long id, @RequestBody org.friesoft.porturl.dto.User user) {
+        ResponseEntity<org.friesoft.porturl.dto.User> response = ResponseEntity.ok(mapToDto(userService.update(id, user)));
+        adminService.exportToFile();
+        return response;
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Transactional
+    public ResponseEntity<Void> deleteUser(Long id) {
+        boolean isAdmin = userService.getUserRoles(id).stream()
+            .anyMatch(r -> r.equalsIgnoreCase("admin") || r.equalsIgnoreCase("role_admin") || r.startsWith("ROLE_ADMIN"));
+        
+        if (isAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin users cannot be deleted");
+        }
+
+        userService.delete(id);
+        adminService.exportToFile();
+        return ResponseEntity.noContent().build();
     }
 
     @Override
@@ -104,8 +150,10 @@ public class UserController extends BaseController implements UserApi {
     }
 
     private org.friesoft.porturl.dto.User mapToDto(User user) {
+        System.out.println("Mapping user: " + user.getId() + ", username: " + user.getUsername());
         org.friesoft.porturl.dto.User dto = new org.friesoft.porturl.dto.User();
         dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setProviderUserId(user.getProviderUserId());
         dto.setImage(user.getImage());
