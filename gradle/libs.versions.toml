@@ -17,7 +17,6 @@ logbackAccess = "2.0.12"
 logbackContrib = "0.1.5"
 logstashEncoder = "9.0"
 otelLogbackAppender = "2.25.0-alpha"
-otelExporter = "1.61.0"
 h2 = "2.4.240"
 
 keycloak = "26.0.8"
@@ -55,7 +54,7 @@ spring-security-test = { module = "org.springframework.security:spring-security-
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
 micrometer-registry-otlp = { module = "io.micrometer:micrometer-registry-otlp" }
 micrometer-tracing-bridge-otel = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
-opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp", version.ref = "otelExporter" }
+opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
 opentelemetry-logback-appender = { module = "io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0", version.ref = "otelLogbackAppender" }
 
 spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "springCloud" }
