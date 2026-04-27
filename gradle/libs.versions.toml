@@ -5,7 +5,7 @@ springCloud = "2025.1.1"
 springDependencyManagement = "1.1.7"
 graalvmBuildtools = "1.0.0"
 versionsPlugin = "0.53.0"
-sonarqube = "7.2.2.6593"
+sonarqube = "7.2.3.7755"
 openapi-generator = "7.21.0"
 
 springdocOpenApi = "3.0.2"
