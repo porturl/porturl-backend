@@ -1,5 +1,6 @@
 package org.friesoft.porturl.service;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import jakarta.annotation.PreDestroy;
@@ -29,7 +30,8 @@ public class YamlSyncService {
     public YamlSyncService(PorturlProperties properties, AdminService adminService) {
         this.properties = properties;
         this.adminService = adminService;
-        this.yamlMapper = new ObjectMapper(new YAMLFactory());
+        this.yamlMapper = new ObjectMapper(new YAMLFactory())
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     @EventListener(ApplicationReadyEvent.class)
