@@ -1,12 +1,8 @@
 package org.friesoft.porturl.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.util.HashSet;
-import java.util.Set;
 
 @Data
 @Entity
@@ -35,20 +31,16 @@ public class Category {
     private SortMode applicationSortMode = SortMode.ALPHABETICAL;
 
     /**
-     * An optional description for the category, which can be displayed as a tooltip.
+     * An optional description for the category, which can be displayed as a
+     * tooltip.
      */
     @Column(nullable = true, length = 512)
     private String description;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "application_category_link",
-        joinColumns = @JoinColumn(name = "category_id"),
-        inverseJoinColumns = @JoinColumn(name = "application_id")
-    )
+    @JoinTable(name = "application_category_link", joinColumns = @JoinColumn(name = "category_id"), inverseJoinColumns = @JoinColumn(name = "application_id"))
     @OrderColumn(name = "sort_order")
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private java.util.List<Application> applications = new java.util.ArrayList<>();
 }
-

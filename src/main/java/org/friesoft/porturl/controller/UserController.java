@@ -7,7 +7,6 @@ import org.friesoft.porturl.service.UserService;
 import org.friesoft.porturl.service.AdminService;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -64,9 +63,10 @@ public class UserController extends BaseController implements UserApi {
         if (cache != null) {
             Authentication authentication = cache.get(ticket.toString(), Authentication.class);
             if (authentication != null) {
-                ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+                ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder
+                        .currentRequestAttributes();
                 HttpServletRequest request = attr.getRequest();
-                
+
                 HttpSession session = request.getSession(true);
                 SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
                 securityContext.setAuthentication(authentication);
@@ -74,7 +74,7 @@ public class UserController extends BaseController implements UserApi {
                 cache.evict(ticket.toString());
             }
         }
-        
+
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(next);
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
@@ -86,20 +86,22 @@ public class UserController extends BaseController implements UserApi {
     }
 
     @Override
-    public ResponseEntity<org.friesoft.porturl.dto.User> updateCurrentUser(@RequestBody org.friesoft.porturl.dto.UserUpdateRequest request) {
+    public ResponseEntity<org.friesoft.porturl.dto.User> updateCurrentUser(
+            @RequestBody org.friesoft.porturl.dto.UserUpdateRequest request) {
         return ResponseEntity.ok(mapToDto(userService.updateCurrentUser(request)));
     }
 
     @Override
     public ResponseEntity<List<String>> getCurrentUserRoles() {
         return ResponseEntity.ok(userService.getCurrentUserRoles().stream()
-            .map(GrantedAuthority::getAuthority)
-            .collect(Collectors.toList()));
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList()));
     }
 
     @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<List<org.friesoft.porturl.dto.User>> getAllUsers(Integer page, Integer size, List<String> sort, String filter, String range) {
+    public ResponseEntity<List<org.friesoft.porturl.dto.User>> getAllUsers(Integer page, Integer size,
+            List<String> sort, String filter, String range) {
         return ok(userService.findAll(getPageable(page, size, sort, range), getQuery(filter)), "users");
     }
 
@@ -107,7 +109,8 @@ public class UserController extends BaseController implements UserApi {
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Transactional
     public ResponseEntity<org.friesoft.porturl.dto.User> createUser(@RequestBody org.friesoft.porturl.dto.User user) {
-        ResponseEntity<org.friesoft.porturl.dto.User> response = ResponseEntity.status(HttpStatus.CREATED).body(mapToDto(userService.save(user)));
+        ResponseEntity<org.friesoft.porturl.dto.User> response = ResponseEntity.status(HttpStatus.CREATED)
+                .body(mapToDto(userService.save(user)));
         adminService.exportToFile();
         return response;
     }
@@ -121,8 +124,10 @@ public class UserController extends BaseController implements UserApi {
     @Override
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Transactional
-    public ResponseEntity<org.friesoft.porturl.dto.User> updateUser(Long id, @RequestBody org.friesoft.porturl.dto.User user) {
-        ResponseEntity<org.friesoft.porturl.dto.User> response = ResponseEntity.ok(mapToDto(userService.update(id, user)));
+    public ResponseEntity<org.friesoft.porturl.dto.User> updateUser(Long id,
+            @RequestBody org.friesoft.porturl.dto.User user) {
+        ResponseEntity<org.friesoft.porturl.dto.User> response = ResponseEntity
+                .ok(mapToDto(userService.update(id, user)));
         adminService.exportToFile();
         return response;
     }
@@ -132,8 +137,9 @@ public class UserController extends BaseController implements UserApi {
     @Transactional
     public ResponseEntity<Void> deleteUser(Long id) {
         boolean isAdmin = userService.getUserRoles(id).stream()
-            .anyMatch(r -> r.equalsIgnoreCase("admin") || r.equalsIgnoreCase("role_admin") || r.startsWith("ROLE_ADMIN"));
-        
+                .anyMatch(r -> r.equalsIgnoreCase("admin") || r.equalsIgnoreCase("role_admin")
+                        || r.startsWith("ROLE_ADMIN"));
+
         if (isAdmin) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin users cannot be deleted");
         }

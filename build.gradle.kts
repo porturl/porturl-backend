@@ -151,7 +151,8 @@ tasks.named<JacocoReport>("jacocoTestReport") {
                     "**/*Config.class",                  // Configuration classes
                     "**/*Configuration.class",           // Spring configuration
                     "**/dto/**",                         // Data transfer objects
-                    "**/entity/**",                      // JPA entities
+                    "**/entities/**",                    // JPA entities
+                    "**/api/**",                         // Generated API interfaces
                     "**/model/**",                       // Domain models
                     "**/*Exception.class",               // Custom exceptions
                     "**/constant/**"                     // Constants

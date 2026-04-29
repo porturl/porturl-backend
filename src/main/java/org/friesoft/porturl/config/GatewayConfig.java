@@ -12,7 +12,6 @@ import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFu
 import static org.springframework.cloud.gateway.server.mvc.filter.FilterFunctions.stripPrefix;
 import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
 import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
-import static org.springframework.web.servlet.function.RequestPredicates.path;
 
 @Configuration
 @ConditionalOnProperty(name = "porturl.otel.enabled", havingValue = "true")

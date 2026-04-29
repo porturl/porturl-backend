@@ -18,7 +18,6 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -43,12 +42,12 @@ public class ApplicationService {
     private final EntityManager entityManager;
 
     public ApplicationService(ApplicationRepository applicationRepository,
-                              CategoryRepository categoryRepository,
-                              UserRepository userRepository,
-                              PorturlProperties properties,
-                              @org.springframework.beans.factory.annotation.Qualifier("keycloakAdmin") Keycloak keycloakAdminClient,
-                              @org.springframework.beans.factory.annotation.Qualifier("masterKeycloakAdmin") Keycloak masterKeycloakAdminClient,
-                              EntityManager entityManager) {
+            CategoryRepository categoryRepository,
+            UserRepository userRepository,
+            PorturlProperties properties,
+            @org.springframework.beans.factory.annotation.Qualifier("keycloakAdmin") Keycloak keycloakAdminClient,
+            @org.springframework.beans.factory.annotation.Qualifier("masterKeycloakAdmin") Keycloak masterKeycloakAdminClient,
+            EntityManager entityManager) {
         this.applicationRepository = applicationRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
@@ -58,7 +57,8 @@ public class ApplicationService {
         this.entityManager = entityManager;
     }
 
-    public Page<org.friesoft.porturl.dto.ApplicationWithRolesDto> getApplicationsForCurrentUser(Pageable pageable, String q) {
+    public Page<org.friesoft.porturl.dto.ApplicationWithRolesDto> getApplicationsForCurrentUser(Pageable pageable,
+            String q) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
@@ -66,7 +66,8 @@ public class ApplicationService {
         List<org.friesoft.porturl.dto.ApplicationWithRolesDto> dtos = allApps.stream()
                 .filter(app -> q == null || q.isEmpty() || app.getName().toLowerCase().contains(q.toLowerCase()))
                 .filter(app -> {
-                    if (isAdmin) return true;
+                    if (isAdmin)
+                        return true;
                     String accessRole = "APP_" + app.getName().toUpperCase().replaceAll("\\s+", "_") + "_ACCESS";
                     return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(accessRole));
                 })
@@ -97,7 +98,8 @@ public class ApplicationService {
         app.setRealm(request.getRealm());
 
         if (request.getCategories() != null) {
-            List<Category> categories = categoryRepository.findAllById(request.getCategories().stream().map(org.friesoft.porturl.dto.Category::getId).collect(Collectors.toList()));
+            List<Category> categories = categoryRepository.findAllById(request.getCategories().stream()
+                    .map(org.friesoft.porturl.dto.Category::getId).collect(Collectors.toList()));
             app.setCategories(categories);
             for (Category category : categories) {
                 category.getApplications().add(app);
@@ -151,7 +153,8 @@ public class ApplicationService {
                 })
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
         entityManager.flush();
-        return applicationRepository.findById(updatedApplication.getId()).orElseThrow(() -> new ApplicationNotFoundException(updatedApplication.getId()));
+        return applicationRepository.findById(updatedApplication.getId())
+                .orElseThrow(() -> new ApplicationNotFoundException(updatedApplication.getId()));
     }
 
     @Transactional
@@ -178,7 +181,8 @@ public class ApplicationService {
 
         // Add to target at specific index
         if (!toCat.getApplications().contains(app)) {
-            if (request.getTargetIndex() != null && request.getTargetIndex() >= 0 && request.getTargetIndex() < toCat.getApplications().size()) {
+            if (request.getTargetIndex() != null && request.getTargetIndex() >= 0
+                    && request.getTargetIndex() < toCat.getApplications().size()) {
                 toCat.getApplications().add(request.getTargetIndex(), app);
             } else {
                 toCat.getApplications().add(app);
@@ -202,11 +206,12 @@ public class ApplicationService {
 
     @Transactional
     public void createClientRoles(Application app, List<String> roles) {
-        if (app.getClientId() == null || app.getClientId().isBlank()) return;
+        if (app.getClientId() == null || app.getClientId().isBlank())
+            return;
         String realm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : getRealm();
-        
+
         var clientResource = getClientResource(realm, app.getClientId());
-        
+
         for (String roleName : roles) {
             RoleRepresentation role = new RoleRepresentation();
             role.setName(roleName);
@@ -221,8 +226,9 @@ public class ApplicationService {
 
     public List<String> getRolesForApplication(Long id) {
         Application app = findOne(id);
-        if (app.getClientId() == null || app.getClientId().isBlank()) return List.of();
-        
+        if (app.getClientId() == null || app.getClientId().isBlank())
+            return List.of();
+
         String realm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : getRealm();
         try {
             return getClientResource(realm, app.getClientId()).roles().list().stream()
@@ -236,7 +242,8 @@ public class ApplicationService {
     @Transactional
     public void assignRoleToUser(Long applicationId, Long userId, String roleName) {
         Application app = findOne(applicationId);
-        User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         String realm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : getRealm();
 
@@ -244,45 +251,54 @@ public class ApplicationService {
             // Assign realm-level role
             RolesResource rolesResource = keycloakAdminClient.realm(getRealm()).roles();
             RoleRepresentation role = rolesResource.get(roleName).toRepresentation();
-            keycloakAdminClient.realm(getRealm()).users().get(user.getProviderUserId()).roles().realmLevel().add(List.of(role));
+            keycloakAdminClient.realm(getRealm()).users().get(user.getProviderUserId()).roles().realmLevel()
+                    .add(List.of(role));
         } else if (app.getClientId() != null && !app.getClientId().isBlank()) {
             // Assign client role
             var clientResource = getClientResource(realm, app.getClientId());
             RoleRepresentation role = clientResource.roles().get(roleName).toRepresentation();
 
             // Find user in target realm
-            String username = keycloakAdminClient.realm(getRealm()).users().get(user.getProviderUserId()).toRepresentation().getUsername();
+            String username = keycloakAdminClient.realm(getRealm()).users().get(user.getProviderUserId())
+                    .toRepresentation().getUsername();
             UserRepresentation targetUser = getKeycloakAdminClient(realm).realm(realm).users().search(username).stream()
                     .filter(u -> u.getUsername().equalsIgnoreCase(username))
                     .findFirst()
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found in target realm"));
+                    .orElseThrow(
+                            () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found in target realm"));
 
-            getKeycloakAdminClient(realm).realm(realm).users().get(targetUser.getId()).roles().clientLevel(getClientUuid(realm, app.getClientId())).add(List.of(role));
+            getKeycloakAdminClient(realm).realm(realm).users().get(targetUser.getId()).roles()
+                    .clientLevel(getClientUuid(realm, app.getClientId())).add(List.of(role));
         }
     }
 
     @Transactional
     public void removeRoleFromUser(Long applicationId, Long userId, String roleName) {
         Application app = findOne(applicationId);
-        User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         String realm = (app.getRealm() != null && !app.getRealm().isBlank()) ? app.getRealm() : getRealm();
 
         if (roleName.startsWith("ROLE_") || roleName.startsWith("APP_")) {
             RolesResource rolesResource = keycloakAdminClient.realm(getRealm()).roles();
             RoleRepresentation role = rolesResource.get(roleName).toRepresentation();
-            keycloakAdminClient.realm(getRealm()).users().get(user.getProviderUserId()).roles().realmLevel().remove(List.of(role));
+            keycloakAdminClient.realm(getRealm()).users().get(user.getProviderUserId()).roles().realmLevel()
+                    .remove(List.of(role));
         } else if (app.getClientId() != null && !app.getClientId().isBlank()) {
             var clientResource = getClientResource(realm, app.getClientId());
             RoleRepresentation role = clientResource.roles().get(roleName).toRepresentation();
 
-            String username = keycloakAdminClient.realm(getRealm()).users().get(user.getProviderUserId()).toRepresentation().getUsername();
+            String username = keycloakAdminClient.realm(getRealm()).users().get(user.getProviderUserId())
+                    .toRepresentation().getUsername();
             UserRepresentation targetUser = getKeycloakAdminClient(realm).realm(realm).users().search(username).stream()
                     .filter(u -> u.getUsername().equalsIgnoreCase(username))
                     .findFirst()
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found in target realm"));
+                    .orElseThrow(
+                            () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found in target realm"));
 
-            getKeycloakAdminClient(realm).realm(realm).users().get(targetUser.getId()).roles().clientLevel(getClientUuid(realm, app.getClientId())).remove(List.of(role));
+            getKeycloakAdminClient(realm).realm(realm).users().get(targetUser.getId()).roles()
+                    .clientLevel(getClientUuid(realm, app.getClientId())).remove(List.of(role));
         }
     }
 
@@ -291,7 +307,8 @@ public class ApplicationService {
     }
 
     private String getClientUuid(String realm, String clientId) {
-        List<org.keycloak.representations.idm.ClientRepresentation> clients = getKeycloakAdminClient(realm).realm(realm).clients().findByClientId(clientId);
+        List<org.keycloak.representations.idm.ClientRepresentation> clients = getKeycloakAdminClient(realm).realm(realm)
+                .clients().findByClientId(clientId);
         if (clients.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Client not found: " + clientId);
         }
@@ -308,18 +325,19 @@ public class ApplicationService {
         dto.setClientId(app.getClientId());
         dto.setRealm(app.getRealm());
         dto.setIsLinked(app.getClientId() != null && !app.getClientId().isBlank());
-        
+
         if (app.getCategories() != null) {
             dto.setCategories(app.getCategories().stream()
-                .map(cat -> {
-                    org.friesoft.porturl.dto.Category catDto = new org.friesoft.porturl.dto.Category();
-                    catDto.setId(cat.getId());
-                    catDto.setName(cat.getName());
-                    catDto.setSortOrder(cat.getSortOrder());
-                    catDto.setApplicationSortMode(org.friesoft.porturl.dto.Category.ApplicationSortModeEnum.fromValue(cat.getApplicationSortMode().name()));
-                    return catDto;
-                })
-                .collect(Collectors.toList()));
+                    .map(cat -> {
+                        org.friesoft.porturl.dto.Category catDto = new org.friesoft.porturl.dto.Category();
+                        catDto.setId(cat.getId());
+                        catDto.setName(cat.getName());
+                        catDto.setSortOrder(cat.getSortOrder());
+                        catDto.setApplicationSortMode(org.friesoft.porturl.dto.Category.ApplicationSortModeEnum
+                                .fromValue(cat.getApplicationSortMode().name()));
+                        return catDto;
+                    })
+                    .collect(Collectors.toList()));
         }
         return dto;
     }
