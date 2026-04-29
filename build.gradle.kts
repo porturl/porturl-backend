@@ -151,7 +151,8 @@ tasks.named<JacocoReport>("jacocoTestReport") {
                     "**/*Config.class",                  // Configuration classes
                     "**/*Configuration.class",           // Spring configuration
                     "**/dto/**",                         // Data transfer objects
-                    "**/entity/**",                      // JPA entities
+                    "**/entities/**",                    // JPA entities
+                    "**/api/**",                         // Generated API interfaces
                     "**/model/**",                       // Domain models
                     "**/*Exception.class",               // Custom exceptions
                     "**/constant/**"                     // Constants
@@ -168,7 +169,7 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
         // Gesamt-Projekt Regel
         rule {
             limit {
-                minimum = "0.15".toBigDecimal() // 40% overall
+                minimum = "0.40".toBigDecimal() // 40% overall
             }
         }
 
@@ -178,7 +179,7 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
             limit {
                 counter = "LINE"
                 value = "COVEREDRATIO"
-                minimum = "0.00".toBigDecimal() // 20% pro Klasse (weniger streng)
+                minimum = "0.20".toBigDecimal() // 20% pro Klasse (weniger streng)
             }
         }
 
@@ -188,7 +189,7 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
             limit {
                 counter = "BRANCH"
                 value = "COVEREDRATIO"
-                minimum = "0.00".toBigDecimal() // 50% if/else Coverage
+                minimum = "0.50".toBigDecimal() // 50% if/else Coverage
             }
         }
     }

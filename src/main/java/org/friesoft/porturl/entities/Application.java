@@ -1,13 +1,9 @@
 package org.friesoft.porturl.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
-import java.util.HashSet;
-import java.util.Set;
 
 @Data
 @Entity
