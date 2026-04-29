@@ -23,6 +23,9 @@ keycloak = "26.0.8"
 jakarta-validation = "3.1.1"
 swagger-annotations = "2.2.48"
 caffeine = "3.2.3"
+testcontainers = "2.0.5"
+testcontainers-keycloak = "4.2.0"
+testcontainers-junit-jupiter = "1.21.4"
 
 [libraries]
 # Spring Boot Starters (Versions are managed by the Spring Boot BOM plugin)
@@ -49,6 +52,9 @@ springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openap
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
 spring-security-test = { module = "org.springframework.security:spring-security-test" }
+testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers-junit-jupiter" }
+testcontainers-keycloak = { module = "com.github.dasniko:testcontainers-keycloak", version.ref = "testcontainers-keycloak" }
 
 # Micrometer & Tracing
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }

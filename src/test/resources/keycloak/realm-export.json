@@ -1,0 +1,70 @@
+{
+  "realm": "porturl-local",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "ROLE_ADMIN",
+        "description": "Administrator role"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ROLE_ADMIN"
+      ]
+    },
+    {
+      "username": "service-account-porturl-management-client",
+      "enabled": true,
+      "serviceAccountClientId": "porturl-management-client",
+      "realmRoles": [
+        "ROLE_ADMIN"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "porturl-management-client",
+      "name": "PortUrl Local Management",
+      "enabled": true,
+      "secret": "local-management-secret",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "authorizationServicesEnabled": false,
+      "publicClient": false
+    },
+    {
+      "clientId": "porturl-web",
+      "name": "PortUrl Admin Web",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ]
+}
