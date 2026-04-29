@@ -1,0 +1,209 @@
+# Technical Details: porturl-backend
+
+This document provides in-depth technical information about the backend's configuration, role management, API, and storage modes.
+
+## 1. Keycloak Configuration
+
+For a detailed guide on setting up Keycloak manually for PortUrl, please refer to [KEYCLOAK_SETUP.md](KEYCLOAK_SETUP.md).
+
+The backend uses Keycloak as a single source of truth for all user permissions. It can dynamically create and manage the entire role hierarchy for new applications. To enable this, the backend requires a dedicated service account with administrative privileges.
+
+### Step 1: Create a Service Account Client
+
+This client allows the backend to authenticate itself against the Keycloak Admin API.
+
+1.  Navigate to your Keycloak Admin Console -> **Clients** -> **Create client**.
+2.  **Client ID:** `porturl-management-client`
+3.  **Client authentication:** `On`
+4.  Click **Save**.
+
+### Step 2: Grant Administrative Permissions
+
+1.  After creating the client, stay on its settings page and go to the **Service account roles** tab.
+2.  Click **Assign role**.
+3.  Filter by client and search for `realm-management`.
+4.  Assign the `realm-admin` role from the `realm-management` client. This role grants the necessary permissions for the backend to manage users and roles within the realm.
+
+### Step 3: Obtain the Client Secret
+
+1.  Go to the **Credentials** tab for the `porturl-management-client`.
+2.  You will see a field labeled **Client Secret**. Copy this value.
+3.  Add this secret to your backend's configuration (e.g., `application.yaml` or environment variables):
+
+    ```yaml
+    porturl:
+      keycloak:
+        admin:
+          server-url: http://localhost:8080
+          realm: your-realm-name
+          client-id: porturl-management-client
+          client-secret: PASTE_THE_COPIED_SECRET_HERE
+    ```
+
+### Step 4: Define a Port-URL Administrator Role
+
+For the administrative endpoints to work, you must have a role for your `porturl` administrators.
+
+1.  Go to **Realm Roles** -> **Create role**.
+2.  **Role Name:** `ROLE_ADMIN` (or a name of your choice).
+3.  Assign this role to any user who should have administrative privileges within the `porturl` application itself.
+
+---
+
+## 2. Automated Role Hierarchy
+
+When a new application is created, the backend automatically generates a full set of roles in Keycloak.
+
+**Example:** Creating an application named "Grafana" with roles `["admin", "viewer"]`.
+
+The backend will create the following 5 roles in Keycloak:
+-   `APP_GRAFANA_ACCESS`: The base role to grant access.
+-   `PERM_GRAFANA_ADMIN`: The permission for admin actions.
+-   `PERM_GRAFANA_VIEWER`: The permission for viewing actions.
+-   `ROLE_GRAFANA_ADMIN`: A **composite role** that includes `APP_GRAFANA_ACCESS` and `PERM_GRAFANA_ADMIN`.
+-   `ROLE_GRAFANA_VIEWER`: A **composite role** that includes `APP_GRAFANA_ACCESS` and `PERM_GRAFANA_VIEWER`.
+
+This entire structure is created automatically. Administrators only need to assign the high-level `ROLE_...` to users.
+
+---
+
+## 3. Backend REST API Endpoints
+
+### User-Facing Endpoint
+
+-   **`GET /api/applications`**
+    -   **Description:** This is a smart endpoint with dual functionality.
+        -   **For a regular user:** It returns a list of only the applications they have been granted access to (i.e., where they have the corresponding `APP_..._ACCESS` role).
+        -   **For a user with `ROLE_ADMIN`:** It returns a list of *all* applications in the system, allowing the admin UI to manage them.
+
+### Administrative Endpoints
+
+The following endpoints are available for managing users and applications. They all require the caller to have the `ROLE_ADMIN` authority.
+
+-   **`GET /api/users`**: Retrieves a list of all users for management purposes.
+
+-   **`POST /api/applications`**
+    -   **Description:** Creates a new application and its entire role hierarchy in Keycloak.
+    -   **Body:**
+        ```json
+        {
+          "name": "My New App",
+          "url": "https://app.example.com",
+          "roles": ["admin", "editor", "viewer"]
+        }
+        ```
+
+-   **`POST /api/applications/{appId}/assign/{userId}/{role}`**
+    -   **Description:** Grants a user a specific role for an application.
+    -   **Example:** `.../assign/123/456/admin` - Assigns the `ROLE_MY_NEW_APP_ADMIN` composite role to the user.
+
+-   **`POST /api/applications/{appId}/unassign/{userId}/{role}`**
+    -   **Description:** Revokes a user's specific role for an application.
+    -   **Example:** `.../unassign/123/456/admin` - Removes the `ROLE_MY_NEW_APP_ADMIN` composite role from the user.
+
+### Export & Import (Backup & Migration)
+
+These endpoints allow for complete backup, restoration, or migration of the system configuration. They also require `ROLE_ADMIN`.
+
+-   **`GET /api/admin/export`**
+    -   **Description:** Exports all categories and applications to a YAML string.
+    -   **Features:**
+        -   Includes all application metadata and category associations.
+        -   Includes all defined roles for each application.
+        -   **Embeds images:** All application icons are converted to Base64 and included in the YAML file.
+    -   **Use Case:** Backups, migration to a new instance, or configuration management (e.g., using Ansible).
+
+-   **`POST /api/admin/import`**
+    -   **Description:** Synchronizes the system state from a YAML string.
+    -   **Process:**
+        -   Performs a **differential sync** (Smart Sync).
+        -   Matches existing categories and applications by name.
+        -   Updates changed fields and creates missing entities.
+        -   Removes entities that are present in the database but missing from the YAML.
+        -   Restores images and re-creates Keycloak roles as needed.
+    -   **Body:** A YAML object (as exported from the `/export` endpoint).
+
+---
+
+## 4. Storage Modes
+
+PortUrl supports two distinct storage strategies to accommodate different deployment environments.
+
+### Mode A: Persistent SQL (Default)
+In this mode, the application uses a persistent database (SQLite by default) to store all state. This is ideal for manual management via the UI.
+
+-   **Primary Source:** `data/porturl.mv.db`
+-   **Configuration:**
+    ```yaml
+    porturl:
+      storage:
+        type: SQL
+    ```
+
+### Mode B: Transparent YAML (GitOps / Infrastructure-as-Code)
+Designed for Kubernetes (ConfigMaps) or Puppet/Ansible managed environments. The application treats a YAML file as the authoritative source of truth and uses an **in-memory database** for high-performance queries.
+
+-   **Primary Source:** A YAML file (e.g., `config.yaml`).
+-   **Key Features:**
+    -   **Startup Sync:** Loads the YAML file into the in-memory DB when the app starts.
+    -   **Hot Reload:** Uses a file watcher to detect external changes to the YAML (e.g., when Puppet updates a file or a ConfigMap is re-mounted) and automatically syncs the DB.
+    -   **Write-Through:** Changes made in the UI are automatically written back to the YAML file.
+    -   **Stateless:** No persistent database file is required; only the YAML file needs to be preserved.
+
+-   **Configuration:**
+    ```yaml
+    porturl:
+      storage:
+        type: YAML
+        yaml-path: "/etc/porturl/config.yaml"
+    ```
+
+---
+
+## 5. Monitoring & Observability (Grafana Cloud)
+
+The backend is instrumented with OpenTelemetry (OTLP) to send metrics and traces to Grafana Cloud.
+
+### Configuration
+By default, monitoring is enabled. The backend sends all telemetry (logs, metrics, and traces) to a local **Grafana Alloy** instance. It also acts as a proxy for the Android app's telemetry.
+
+#### Telemetry Flow
+1.  **Android App** -> `Backend (:8080/otlp)` -> `Alloy (:4318)` -> **Grafana Cloud**
+2.  **Backend** -> `Alloy (:4318)` -> **Grafana Cloud**
+
+| Property | Environment Variable | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `management.tracing.enabled` | `MANAGEMENT_TRACING_ENABLED` | `true` | Enables/disables tracing. |
+| `management.otlp.metrics.export.url` | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | `http://localhost:4318/v1/metrics` | Local Alloy endpoint. |
+| `management.tracing.sampling.probability` | `MANAGEMENT_TRACING_SAMPLING_PROBABILITY` | `1.0` | Sampling rate (1.0 = 100%). |
+
+### Running with Monitoring
+To start the backend with monitoring enabled:
+```bash
+export GRAFANA_OTLP_AUTH="Basic <your_base64_auth_token>"
+./gradlew bootRun
+```
+
+---
+
+## 6. Administrator Workflow: How to Grant App Access
+
+### Scenario: An admin wants to grant "Bob" admin rights for the new "Grafana" app.
+
+1.  **The admin's frontend loads the user management page.**
+    -   The frontend calls `GET /api/users` to get a list of all users. The admin finds "Bob" and gets his `userId`.
+    -   The frontend calls `GET /api/applications` (as an admin) to get a list of all applications. The admin finds "Grafana" and gets its `applicationId`.
+    -   The UI presents the available roles for Grafana ("admin", "viewer").
+
+2.  **The admin clicks an "Assign Admin" button in the UI.**
+    -   The frontend makes a call to:
+        `POST /api/applications/{grafana-app-id}/assign/{bob-user-id}/admin`
+
+3.  **The backend performs the magic.**
+    -   It looks up the "Grafana" application.
+    -   It looks up "Bob" to find his Keycloak provider ID.
+    -   It calls the Keycloak Admin API to find the role named `ROLE_GRAFANA_ADMIN`.
+    -   It assigns this composite role to Bob in Keycloak.
+
+4.  **Confirmation.**
+    -   The API returns a `200 OK`. The next time Bob logs in, his JWT will contain `ROLE_GRAFANA_ADMIN`, `APP_GRAFANA_ACCESS`, and `PERM_GRAFANA_ADMIN`, granting him full access and permissions.
