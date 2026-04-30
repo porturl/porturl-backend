@@ -5,17 +5,31 @@
 
 version: 2
 updates:
-  - package-ecosystem: "gradle" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # Development updates on Main
+  - package-ecosystem: "gradle"
+    directory: "/"
+    target-branch: "main"
     schedule:
       interval: "weekly"
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "main"
     schedule:
-      # Check for updates to GitHub Actions every week
       interval: "weekly"
   - package-ecosystem: "docker"
     directory: "/"
+    target-branch: "main"
     schedule:
-      # Check for updates to GitHub Actions every week
+      interval: "weekly"
+
+  # Bugfix & Security updates for the Rolling Production Release
+  - package-ecosystem: "gradle"
+    directory: "/"
+    target-branch: "production"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/"
+    target-branch: "production"
+    schedule:
       interval: "weekly"
