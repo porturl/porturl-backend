@@ -11,16 +11,28 @@ updates:
     target-branch: "main"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "[main]"
+    labels:
+      - "main"
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "main"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "[main]"
+    labels:
+      - "main"
   - package-ecosystem: "docker"
     directory: "/"
     target-branch: "main"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "[main]"
+    labels:
+      - "main"
 
   # Bugfix & Security updates for the Rolling Production Release
   - package-ecosystem: "gradle"
@@ -28,8 +40,16 @@ updates:
     target-branch: "production"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "[prod]"
+    labels:
+      - "production"
   - package-ecosystem: "docker"
     directory: "/"
     target-branch: "production"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "[prod]"
+    labels:
+      - "production"
