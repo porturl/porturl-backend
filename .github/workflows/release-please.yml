@@ -64,6 +64,10 @@ jobs:
              git add .release-please-manifest.json
              git commit -m "chore(production): bootstrap patch versioning for $VERSION"
              git push origin HEAD:production --force
+             
+             # Create and push the initial patch tag so release-please can find it
+             git tag "v$VERSION-patch.0"
+             git push origin "v$VERSION-patch.0"
           fi
 
           # Cleanup: Close any "Giant PRs" that release-please might have created
