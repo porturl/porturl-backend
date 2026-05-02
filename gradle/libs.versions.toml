@@ -24,7 +24,7 @@ jakarta-validation = "3.1.1"
 swagger-annotations = "2.2.49"
 caffeine = "3.2.3"
 testcontainers = "2.0.5"
-testcontainers-keycloak = "4.2.0"
+testcontainers-keycloak = "4.2.1"
 testcontainers-junit-jupiter = "1.21.4"
 
 [libraries]
