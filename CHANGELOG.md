@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1-patch.0](https://github.com/porturl/porturl-backend/compare/v0.11.0-patch.0...v0.11.1-patch.0) (2026-05-09)
+
+
+### Bug Fixes
+
+* **prod:** trigger initial production release ([22a49ae](https://github.com/porturl/porturl-backend/commit/22a49aea39697cfca536b48bce356879c43464a0))
+
 ## [0.11.0](https://github.com/porturl/porturl-backend/compare/v0.10.0...v0.11.0) (2026-02-28)
 
 
