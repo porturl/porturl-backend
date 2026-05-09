@@ -12,7 +12,8 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "[main]"
+      prefix: "fix"
+      include: "scope"
     labels:
       - "main"
   - package-ecosystem: "github-actions"
@@ -21,7 +22,8 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "[main]"
+      prefix: "fix"
+      include: "scope"
     labels:
       - "main"
   - package-ecosystem: "docker"
@@ -30,7 +32,8 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "[main]"
+      prefix: "fix"
+      include: "scope"
     labels:
       - "main"
 
@@ -41,7 +44,7 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "[prod]"
+      prefix: "fix(prod)"
     labels:
       - "production"
     ignore:
@@ -53,6 +56,6 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "[prod]"
+      prefix: "fix(prod)"
     labels:
       - "production"
