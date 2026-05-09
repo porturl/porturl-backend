@@ -56,23 +56,15 @@ jobs:
           gh workflow run publish-release.yml --repo ${{ github.repository }} -f tag=$TAG_NAME -f sha=${{ github.sha }}
 
           # Update rolling 'production' branch if we released from main
-          # We also bootstrap the manifest to start patch versioning (e.g. 0.11.0-patch.0)
+          # We also bootstrap the manifest to start patch versioning (e.g. 0.11.1)
           if [ "${{ github.ref_name }}" = "main" ]; then
              echo "Bootstrapping production branch for version $VERSION"
              git checkout -b production-bootstrap
-             echo "{\".\": \"$VERSION-patch.0\"}" > .release-please-manifest.json
+             echo "{\".\": \"$VERSION\"}" > .release-please-manifest.json
              
-             # Also update config for prerelease strategy on production branch
-             # This ensures production follows the -patch.x sequence instead of bumping major/minor
-             sed -i 's/"release-type": "java",/"release-type": "java",\n      "versioning-strategy": "prerelease",\n      "prerelease": true,/' release-please-config.json
-
-             git add .release-please-manifest.json release-please-config.json
+             git add .release-please-manifest.json
              git commit -m "chore(production): bootstrap patch versioning for $VERSION"
              git push origin HEAD:production --force
-             
-             # Create and push the initial patch tag so release-please can find it
-             git tag "v$VERSION-patch.0"
-             git push origin "v$VERSION-patch.0"
           fi
 
           # Cleanup: Close any "Giant PRs" that release-please might have created
