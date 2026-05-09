@@ -4,8 +4,6 @@
   "packages": {
     ".": {
       "release-type": "java",
-      "versioning-strategy": "prerelease",
-      "prerelease": true,
       "skip-snapshot": true,
       "extra-files": [
         "gradle.properties"
