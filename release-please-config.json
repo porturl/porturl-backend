@@ -4,6 +4,7 @@
   "packages": {
     ".": {
       "release-type": "java",
+      "bump-patch-for-minor-pre-major": false,
       "skip-snapshot": true,
       "extra-files": [
         "gradle.properties"
