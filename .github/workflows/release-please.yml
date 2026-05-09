@@ -61,7 +61,12 @@ jobs:
              echo "Bootstrapping production branch for version $VERSION"
              git checkout -b production-bootstrap
              echo "{\".\": \"$VERSION-patch.0\"}" > .release-please-manifest.json
-             git add .release-please-manifest.json
+             
+             # Also update config for prerelease strategy on production branch
+             # This ensures production follows the -patch.x sequence instead of bumping major/minor
+             sed -i 's/"release-type": "java",/"release-type": "java",\n      "versioning-strategy": "prerelease",\n      "prerelease": true,/' release-please-config.json
+
+             git add .release-please-manifest.json release-please-config.json
              git commit -m "chore(production): bootstrap patch versioning for $VERSION"
              git push origin HEAD:production --force
              
