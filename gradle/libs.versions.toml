@@ -3,7 +3,7 @@
 springBoot = "4.0.6"
 springCloud = "2025.1.1"
 springDependencyManagement = "1.1.7"
-graalvmBuildtools = "1.1.0"
+graalvmBuildtools = "1.1.2"
 versionsPlugin = "0.54.0"
 sonarqube = "7.3.0.8198"
 openapi-generator = "7.22.0"
