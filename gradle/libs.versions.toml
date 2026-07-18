@@ -19,7 +19,7 @@ logstashEncoder = "9.0"
 otelLogbackAppender = "2.29.0-alpha"
 h2 = "2.4.240"
 
-keycloak = "26.0.9"
+keycloak = "26.0.11"
 jakarta-validation = "3.1.1"
 swagger-annotations = "2.2.51"
 caffeine = "3.2.4"
