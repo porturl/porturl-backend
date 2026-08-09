@@ -13,7 +13,7 @@ springdocOpenApi = "3.0.3"
 # Dependency Versions
 lombok = "1.18.46"
 logback = "1.5.38"
-logbackAccess = "2.0.12"
+logbackAccess = "2.0.13"
 logbackContrib = "0.1.5"
 logstashEncoder = "9.0"
 otelLogbackAppender = "2.29.0-alpha"
