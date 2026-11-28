@@ -1,7 +1,7 @@
 [versions]
 # Plugin Versions
 springBoot = "4.0.9"
-springCloud = "2025.1.4"
+springCloud = "2025.1.5"
 springDependencyManagement = "1.1.7"
 graalvmBuildtools = "0.11.5"
 versionsPlugin = "0.54.0"
